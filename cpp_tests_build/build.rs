@@ -1,19 +1,18 @@
 use std::{fs, path::Path, process::Command};
 
-fn main() {
-    Command::new("cmake")
-        .args([
-            "-S../cpp_tests",
-            "-B../target/cpp_build",
-            "-DCMAKE_BUILD_TYPE=Release",
-        ])
-        .spawn()
-        .unwrap();
+fn spawn_ok(cmd: &mut Command) {
+    let code = cmd.status().unwrap();
+    assert!(code.success());
+}
 
-    Command::new("cmake")
-        .args(["--build", "../target/cpp_build", "--config", "Release"])
-        .spawn()
-        .unwrap();
+fn compile_cpp() {
+    spawn_ok(Command::new("cmake").args([
+        "-S../cpp_tests",
+        "-B../target/cpp_build",
+        "-DCMAKE_BUILD_TYPE=Release",
+    ]));
+
+    spawn_ok(Command::new("cmake").args(["--build", "../target/cpp_build", "--config", "Release"]));
 
     // TODO: Use the cross platform compilation vars
     let dl_name = if cfg!(target_os = "windows") {
@@ -45,4 +44,19 @@ fn main() {
     fs::copy(in_path, format!("../target/Release/{dl_name}")).unwrap();
 
     println!("cargo::rerun-if-changed=../cpp_tests");
+}
+
+fn generate_header() {
+    cbindgen::Builder::new()
+        .with_crate("../tests_api")
+        .generate()
+        .unwrap()
+        .write_to_file("../cpp_tests/src/api.hpp");
+
+    println!("cargo::rerun-if-changed=../tests_api");
+}
+
+fn main() {
+    generate_header();
+    compile_cpp();
 }

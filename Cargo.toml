@@ -17,6 +17,7 @@ libloading = "0.8.3"
 slotmap = "1"
 ascii_table = "4"
 clap = { version = "4", features = ["derive"] }
+cbindgen = "0.26.0"
 
 [profile.release]
 lto = "thin"

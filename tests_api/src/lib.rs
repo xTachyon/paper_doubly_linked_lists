@@ -25,3 +25,6 @@ pub struct RawLoadTestsResult {
 }
 
 pub type LoadTestsFn = unsafe extern "C" fn() -> RawLoadTestsResult;
+
+#[no_mangle]
+pub extern "C" fn ignore_this_cbindgen_needs_to_find_stuff(_: LoadTestsFn) {}

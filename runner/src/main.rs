@@ -6,7 +6,7 @@ use std::{fmt::Display, mem::ManuallyDrop, time::Instant};
 use tests_api::{AddFn, CreateFn, DestroyFn, LoadTestsFn, RawLoadTestsResult, SumAllFn};
 
 struct TestData {
-    pub name: &'static str,
+    pub name: String,
 
     pub create: CreateFn,
     pub destroy: DestroyFn,
@@ -14,12 +14,13 @@ struct TestData {
     pub sum_all: SumAllFn,
 }
 
-unsafe fn wrap_raw_tests(raw_tests: RawLoadTestsResult, tests: &mut Vec<TestData>) {
+unsafe fn wrap_raw_tests(prefix: &str, raw_tests: RawLoadTestsResult, tests: &mut Vec<TestData>) {
     for i in 0..raw_tests.tests_count {
         let current = &*raw_tests.tests.add(i);
 
         let name = std::slice::from_raw_parts(current.name, current.name_size);
         let name = std::str::from_utf8(name).unwrap();
+        let name = format!("{}_{}", prefix, name);
 
         tests.push(TestData {
             name,
@@ -31,14 +32,14 @@ unsafe fn wrap_raw_tests(raw_tests: RawLoadTestsResult, tests: &mut Vec<TestData
     }
 }
 
-unsafe fn load(path: &str, tests: &mut Vec<TestData>) -> Result<()> {
+unsafe fn load(prefix: &str, path: &str, tests: &mut Vec<TestData>) -> Result<()> {
     println!("loading {path}");
 
     let lib = ManuallyDrop::new(Library::new(path)?);
     let load_tests: Symbol<LoadTestsFn> = lib.get(b"load_tests\0")?;
 
     let raw_tests = load_tests();
-    wrap_raw_tests(raw_tests, tests);
+    wrap_raw_tests(prefix, raw_tests, tests);
 
     Ok(())
 }
@@ -48,8 +49,8 @@ struct TestResultExtra {
     slower_total: String,
     slower_run: String,
 }
-struct TestResult {
-    name: &'static str,
+struct TestResult<'x> {
+    name: &'x str,
     creation_time: u128,
     run_time: u128,
     destroy_time: u128,
@@ -57,7 +58,7 @@ struct TestResult {
     extra: TestResultExtra,
 }
 
-fn bench(test: &TestData, results: &mut Vec<TestResult>, iterations: u64) {
+fn bench<'x>(test: &'x TestData, results: &mut Vec<TestResult<'x>>, iterations: u64) {
     println!("testing {}..", test.name);
 
     let time = Instant::now();
@@ -79,7 +80,7 @@ fn bench(test: &TestData, results: &mut Vec<TestResult>, iterations: u64) {
 
     let total_time = creation_time + run_time + destroy_time;
     results.push(TestResult {
-        name: test.name,
+        name: &test.name,
         creation_time: creation_time.as_millis(),
         run_time: run_time.as_millis(),
         destroy_time: destroy_time.as_millis(),
@@ -93,7 +94,7 @@ const DEFAULT_ITERATIONS: u64 = 1_000_000;
 #[derive(Parser)]
 struct Args {
     #[arg(short, long, default_value_t=DEFAULT_ITERATIONS)]
-    iterations: u64
+    iterations: u64,
 }
 
 fn main() -> Result<()> {
@@ -101,12 +102,17 @@ fn main() -> Result<()> {
     println!("iterations={}", args.iterations);
 
     let mut tests = Vec::with_capacity(16);
-    unsafe { load("rust_tests.dll", &mut tests)? };
+    unsafe {
+        load("rust", "rust_tests.dll", &mut tests)?;
+        load("cpp", "cpp_tests.dll", &mut tests)?;
+        println!();
+    };
 
     let mut results = Vec::new();
-    for i in tests {
-        bench(&i, &mut results, args.iterations);
+    for i in tests.iter() {
+        bench(i, &mut results, args.iterations);
     }
+    println!();
 
     let mut ascii_table = AsciiTable::default();
     ascii_table.set_max_width(200);
