@@ -1,16 +1,22 @@
 [workspace]
-members = [
+members = [ "cpp_tests_build",
     "runner",
     "rust_tests",
     "tests_api",
+    "cpp_tests_build",
 ]
 
 resolver = "2"
 
 [workspace.dependencies]
 tests_api = { path = "tests_api" }
+cpp_tests_build = { path = "cpp_tests_build" }
 
 anyhow = "1"
 libloading = "0.8.3"
 slotmap = "1"
 ascii_table = "4"
+clap = { version = "4", features = ["derive"] }
+
+[profile.release]
+lto = "thin"

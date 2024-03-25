@@ -5,7 +5,9 @@ edition = "2021"
 
 [dependencies]
 tests_api.workspace = true
+cpp_tests_build.workspace = true
 
 anyhow.workspace = true
 libloading.workspace = true
 ascii_table.workspace = true
+clap.workspace = true

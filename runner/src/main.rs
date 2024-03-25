@@ -1,5 +1,6 @@
 use anyhow::Result;
 use ascii_table::AsciiTable;
+use clap::Parser;
 use libloading::{Library, Symbol};
 use std::{fmt::Display, mem::ManuallyDrop, time::Instant};
 use tests_api::{AddFn, CreateFn, DestroyFn, LoadTestsFn, RawLoadTestsResult, SumAllFn};
@@ -31,18 +32,16 @@ unsafe fn wrap_raw_tests(raw_tests: RawLoadTestsResult, tests: &mut Vec<TestData
 }
 
 unsafe fn load(path: &str, tests: &mut Vec<TestData>) -> Result<()> {
-    println!("Loading {path}");
+    println!("loading {path}");
 
     let lib = ManuallyDrop::new(Library::new(path)?);
-    let load_tests: Symbol<LoadTestsFn> = lib.get(b"load_tests")?;
+    let load_tests: Symbol<LoadTestsFn> = lib.get(b"load_tests\0")?;
 
     let raw_tests = load_tests();
     wrap_raw_tests(raw_tests, tests);
 
     Ok(())
 }
-
-const ITERATIONS: u64 = 1_000_000;
 
 #[derive(Default)]
 struct TestResultExtra {
@@ -58,11 +57,13 @@ struct TestResult {
     extra: TestResultExtra,
 }
 
-fn bench(test: &TestData, results: &mut Vec<TestResult>) {
+fn bench(test: &TestData, results: &mut Vec<TestResult>, iterations: u64) {
+    println!("testing {}..", test.name);
+
     let time = Instant::now();
-    let obj = (test.create)(ITERATIONS as usize);
-    for index in 0..ITERATIONS {
-        (test.add)(obj, ITERATIONS - index);
+    let obj = (test.create)(iterations as usize);
+    for index in 0..iterations {
+        (test.add)(obj, iterations - index);
     }
     let creation_time = time.elapsed();
 
@@ -70,7 +71,7 @@ fn bench(test: &TestData, results: &mut Vec<TestResult>) {
     let sum = (test.sum_all)(obj);
     let run_time = time.elapsed();
 
-    assert_eq!(sum, ITERATIONS * (ITERATIONS + 1) / 2);
+    assert_eq!(sum, iterations * (iterations + 1) / 2);
 
     let time = Instant::now();
     (test.destroy)(obj);
@@ -87,13 +88,24 @@ fn bench(test: &TestData, results: &mut Vec<TestResult>) {
     });
 }
 
+const DEFAULT_ITERATIONS: u64 = 1_000_000;
+
+#[derive(Parser)]
+struct Args {
+    #[arg(short, long, default_value_t=DEFAULT_ITERATIONS)]
+    iterations: u64
+}
+
 fn main() -> Result<()> {
+    let args = Args::parse();
+    println!("iterations={}", args.iterations);
+
     let mut tests = Vec::with_capacity(16);
     unsafe { load("rust_tests.dll", &mut tests)? };
 
     let mut results = Vec::new();
     for i in tests {
-        bench(&i, &mut results);
+        bench(&i, &mut results, args.iterations);
     }
 
     let mut ascii_table = AsciiTable::default();
