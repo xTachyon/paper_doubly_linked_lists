@@ -89,7 +89,7 @@ fn bench<'x>(test: &'x TestData, results: &mut Vec<TestResult<'x>>, iterations: 
     });
 }
 
-const DEFAULT_ITERATIONS: u64 = 1_000_000;
+const DEFAULT_ITERATIONS: u64 = 10_000_000;
 
 #[derive(Parser)]
 struct Args {
@@ -97,14 +97,25 @@ struct Args {
     iterations: u64,
 }
 
+const DL_NAMES: (&str, &str) = if cfg!(target_os = "windows") {
+    ("rust_tests.dll", "cpp_tests.dll")
+} else if cfg!(target_os = "linux") {
+    ("librust_tests.so", "libcpp_tests.so")
+} else if cfg!(target_os = "macos") {
+    ("librust_tests.dylib", "libcpp_tests.dylib")
+} else {
+    panic!("what are you running on? 🤔");
+};
+
 fn main() -> Result<()> {
     let args = Args::parse();
     println!("iterations={}", args.iterations);
 
     let mut tests = Vec::with_capacity(16);
     unsafe {
-        load("rust", "rust_tests.dll", &mut tests)?;
-        load("cpp", "cpp_tests.dll", &mut tests)?;
+        let (rust_path, cpp_path) = DL_NAMES;
+        load("rust", rust_path, &mut tests)?;
+        load("cpp", cpp_path, &mut tests)?;
         println!();
     };
 

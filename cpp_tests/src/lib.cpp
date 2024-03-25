@@ -1,3 +1,4 @@
+#include <cstring>
 #include "api.hpp"
 #include "solutions/solutions.hpp"
 

@@ -18,9 +18,9 @@ fn compile_cpp() {
     let dl_name = if cfg!(target_os = "windows") {
         "cpp_tests.dll"
     } else if cfg!(target_os = "linux") {
-        "cpp_tests.so"
+        "libcpp_tests.so"
     } else if cfg!(target_os = "macos") {
-        "cpp_tests.dylib"
+        "libcpp_tests.dylib"
     } else {
         panic!("what are you running on? 🤔");
     };
