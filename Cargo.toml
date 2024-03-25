@@ -1,0 +1,16 @@
+[workspace]
+members = [
+    "runner",
+    "rust_tests",
+    "tests_api",
+]
+
+resolver = "2"
+
+[workspace.dependencies]
+tests_api = { path = "tests_api" }
+
+anyhow = "1"
+libloading = "0.8.3"
+slotmap = "1"
+ascii_table = "4"
