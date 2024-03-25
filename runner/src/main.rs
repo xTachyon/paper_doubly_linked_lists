@@ -62,7 +62,7 @@ fn bench<'x>(test: &'x TestData, results: &mut Vec<TestResult<'x>>, iterations: 
     println!("testing {}..", test.name);
 
     let time = Instant::now();
-    let obj = (test.create)(iterations as usize);
+    let obj = (test.create)(iterations as usize + 1);
     for index in 0..iterations {
         (test.add)(obj, iterations - index);
     }

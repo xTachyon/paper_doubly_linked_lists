@@ -1,6 +1,7 @@
 #include "solutions.hpp"
 
 StdList::StdList(size_t) {
+    list.push_back(0);
 }
 
 void StdList::add(uint64_t element) {

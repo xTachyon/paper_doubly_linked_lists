@@ -24,7 +24,6 @@ class ManualList {
 
     Node* head;
     Node* tail;
-    size_t size;
 
   public:
     ManualList(size_t nodes);

@@ -1,6 +1,9 @@
 #include "solutions.hpp"
 
-ManualList::ManualList(size_t) : head(nullptr), tail(nullptr), size(0) {
+ManualList::ManualList(size_t) {
+    auto node = new Node{ 0, nullptr, nullptr };
+    head = node;
+    tail = node;
 }
 
 ManualList::~ManualList() {
@@ -13,15 +16,9 @@ ManualList::~ManualList() {
 
 void ManualList::add(uint64_t element) {
     Node* newNode = new Node(element);
-    if (!head) {
-        head = newNode;
-        tail = newNode;
-    } else {
-        tail->next = newNode;
-        newNode->prev = tail;
-        tail = newNode;
-    }
-    ++size;
+    tail->next = newNode;
+    newNode->prev = tail;
+    tail = newNode;
 }
 
 uint64_t ManualList::sum_all() const {
