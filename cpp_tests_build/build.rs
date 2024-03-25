@@ -40,6 +40,8 @@ fn compile_cpp() {
         );
     };
 
+    fs::create_dir_all("../target/Debug").unwrap();
+    fs::create_dir_all("../target/Release").unwrap();
     fs::copy(in_path, format!("../target/Debug/{dl_name}")).unwrap();
     fs::copy(in_path, format!("../target/Release/{dl_name}")).unwrap();
 
