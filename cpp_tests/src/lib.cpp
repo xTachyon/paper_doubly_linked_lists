@@ -14,19 +14,19 @@ EXPORT RawLoadTestsResult load_tests();
 
 template <typename T>
 RawTestData sol(const char* name) {
-    auto create = [](uintptr_t nodes) -> Handle {
+    auto create = [](uintptr_t nodes) noexcept -> Handle {
         auto ptr = new T(nodes);
         return ptr;
     };
-    auto destroy = [](Handle handle) {
+    auto destroy = [](Handle handle) noexcept {
         auto ptr = static_cast<T*>(handle);
         delete ptr;
     };
-    auto add = [](Handle handle, uint64_t element) {
+    auto add = [](Handle handle, uint64_t element) noexcept {
         auto ptr = static_cast<T*>(handle);
         ptr->add(element);
     };
-    auto sum_all = [](Handle handle) -> uint64_t {
+    auto sum_all = [](Handle handle) noexcept -> uint64_t {
         auto ptr = static_cast<T*>(handle);
         return ptr->sum_all();
     };
@@ -35,6 +35,9 @@ RawTestData sol(const char* name) {
 }
 
 EXPORT RawLoadTestsResult load_tests() {
-    static RawTestData TESTS[] = { sol<StdList>("std_list") };
+    static RawTestData TESTS[] = {
+        sol<StdList>("std_list"),
+        sol<ManualList>("manual_list"),
+    };
     return RawLoadTestsResult{ TESTS, sizeof(TESTS) / sizeof(*TESTS) };
 }

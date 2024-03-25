@@ -1,12 +1,17 @@
 cmake_minimum_required(VERSION 3.21)
 project(cpp_tests)
 
+set (CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED On)
+set(CMAKE_CXX_EXTENSIONS Off)
+
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
 set(sources
     src/lib.cpp
     src/solutions/solutions.hpp
+    src/solutions/manual_list.cpp
     src/solutions/std_list.cpp
 )
 
