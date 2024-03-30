@@ -4,7 +4,7 @@ use super::DoubleLinkedList;
 
 static mut GLOBAL_HANDLE_UNIQUE_ID: u32 = 0;
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, PartialEq, Eq)]
 pub struct Handle<T> {
     index: u32,
     unique_id: u32,
@@ -58,7 +58,14 @@ impl<T> DoubleLinkedList<T> for Implementation<T> {
         if self.data.is_empty() {
             return self.add_first_element(value);
         } else {
-            todo!()
+            let new_node = self.allocate(value);
+            let cnode_next = self.data[node.index as usize].as_ref().unwrap().next;
+            self.link(node, new_node);
+            self.link(new_node, cnode_next);
+            if (node.unique_id == self.tail.unique_id) && (node.index == self.tail.index) {
+                self.tail = new_node;
+            }
+            new_node
         }
     }
 
@@ -66,7 +73,18 @@ impl<T> DoubleLinkedList<T> for Implementation<T> {
         if self.data.is_empty() {
             return self.add_first_element(value);
         } else {
-            todo!()
+            if node.is_valid() {
+                let new_node = self.allocate(value);
+                let cnode_prec = self.data[node.index as usize].as_ref().unwrap().prec;
+                self.link(new_node, node);
+                self.link(cnode_prec, new_node);
+                if (node.unique_id == self.head.unique_id) && (node.index == self.head.index) {
+                    self.head = new_node;
+                }
+                new_node
+            } else {
+                Handle::INVALID
+            }
         }
     }
 
@@ -74,7 +92,10 @@ impl<T> DoubleLinkedList<T> for Implementation<T> {
         if self.data.is_empty() {
             return self.add_first_element(value);
         } else {
-            todo!()
+            let node = self.allocate(value);
+            self.link(self.tail, node);
+            self.tail = node;
+            node
         }
     }
 
@@ -82,12 +103,34 @@ impl<T> DoubleLinkedList<T> for Implementation<T> {
         if self.data.is_empty() {
             return self.add_first_element(value);
         } else {
-            todo!()
+            let node = self.allocate(value);
+            self.link(node, self.head);
+            self.head = node;
+            node
         }
     }
 
     fn delete(&mut self, node: Self::Node) {
-        todo!()
+        let count = self.data.len();
+        if node.index as usize >= count {
+            return;
+        }
+        let p;
+        let n;
+        if let Some(elem) = self.data[node.index as usize].as_ref() {
+            p = elem.prec;
+            n = elem.next;
+        } else {
+            return;
+        }
+        self.link(p,n);
+        if (node.index == self.head.index) && (node.unique_id == self.head.unique_id) {
+            self.head = n;
+        }
+        if (node.index == self.tail.index) && (node.unique_id == self.tail.unique_id) {
+            self.tail = p;
+        }
+        self.data[node.index as usize] = None;
     }
 
     fn next(&self, node: Self::Node) -> Option<Self::Node> {
@@ -142,6 +185,28 @@ impl<T> DoubleLinkedList<T> for Implementation<T> {
 }
 
 impl<T> Implementation<T> {
+    fn allocate(&mut self, value: T) -> Handle<T> {
+        let idx = self.data.len();
+        let h = Handle::new(idx as u32);
+        self.data.push(Some(Element {
+            next: Handle::INVALID,
+            prec: Handle::INVALID,
+            value,
+            unique_id: h.unique_id,
+        }));
+        h
+    }
+    fn link(&mut self, n1: Handle<T>, n2: Handle<T>) {
+        let idx1 = n1.index as usize;
+        let idx2 = n2.index as usize;
+        let count = self.data.len();
+        if idx1 < count {
+            self.data[idx1].as_mut().unwrap().next = n2;
+        }
+        if idx2 < count {
+            self.data[idx2].as_mut().unwrap().prec = n1;
+        }
+    }
     fn add_first_element(&mut self, value: T) -> Handle<T> {
         // assume self.data is empty
         let h = Handle::new(0);
@@ -151,6 +216,8 @@ impl<T> Implementation<T> {
             value,
             unique_id: h.unique_id,
         }));
+        self.head = h;
+        self.tail = h;
         h
     }
     fn element(&self, handle: Handle<T>) -> Option<&Element<T>> {
