@@ -5,8 +5,8 @@ use stats_alloc::StatsAlloc;
 pub type Handle = *mut c_void;
 
 pub type FnGetAlloc = extern "C" fn() -> &'static StatsAlloc<System>;
-pub type FnScenarioNew = extern "C" fn() -> Handle;
-pub type FnScenarioRun = extern "C" fn(handle: Handle);
+pub type FnScenarioNew = unsafe extern "C" fn() -> Handle;
+pub type FnScenarioRun = unsafe extern "C" fn(handle: Handle);
 
 #[repr(C)]
 pub struct RawScenario {

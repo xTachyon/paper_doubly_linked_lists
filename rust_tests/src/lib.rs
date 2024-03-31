@@ -11,15 +11,15 @@ use tests_api::{Handle, RawImpl, RawLoadResult, RawScenario};
 static GLOBAL: &StatsAlloc<System> = &INSTRUMENTED_SYSTEM;
 
 const fn scenario<S: Scenario>(name: &'static str) -> RawScenario {
-    extern "C" fn new<S: Scenario>() -> Handle {
+    unsafe extern "C" fn new<S: Scenario>() -> Handle {
         let s = Box::new(S::new());
         let ptr = Box::into_raw(s);
 
         ptr as Handle
     }
-    extern "C" fn run<S: Scenario>(handle: Handle) {
+    unsafe extern "C" fn run<S: Scenario>(handle: Handle) {
         let ptr = handle as *mut S;
-        let obj = unsafe { Box::from_raw(ptr) };
+        let obj = Box::from_raw(ptr);
         obj.run();
     }
 

@@ -91,9 +91,9 @@ fn bench<'x>(test: &'x TestData, results: &mut HashMap<&str, Vec<TestResult<'x>>
     for i in test.scenarios.iter() {
         let alloc = (test.get_alloc)();
         let region = Region::new(alloc);
-        let object = (i.new)();
+        let object = unsafe { (i.new)() };
         let time = Instant::now();
-        (i.run)(object);
+        unsafe { (i.run)(object) };
         let elapsed = time.elapsed();
         let stats = region.change();
 
