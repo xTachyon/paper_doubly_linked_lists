@@ -1,10 +1,15 @@
 use anyhow::Result;
-use ascii_table::AsciiTable;
+use ascii_table::{Align, AsciiTable};
 use clap::Parser;
 use humansize::{format_size, BINARY};
 use libloading::{Library, Symbol};
 use stats_alloc::Region;
-use std::{collections::HashMap, fmt::Display, mem::ManuallyDrop, time::Instant};
+use std::{
+    collections::HashMap,
+    fmt::Display,
+    mem::ManuallyDrop,
+    time::{Duration, Instant},
+};
 use tests_api::{FnGetAlloc, FnLoadTests, FnScenarioNew, FnScenarioRun, RawLoadResult};
 
 struct ScenarioData {
@@ -67,14 +72,14 @@ unsafe fn load(prefix: &str, path: &str, tests: &mut Vec<TestData>) -> Result<()
 
 #[derive(Default)]
 struct TestResultExtra {
+    run_time: String,
     slower_run: String,
     max_memory: String,
 }
 
 struct TestResult<'x> {
-    scenario_name: &'x str,
     impl_name: &'x str,
-    run_time: u128,
+    run_time: Duration,
     no_allocs: usize,
     max_memory: usize,
     extra: TestResultExtra,
@@ -96,9 +101,8 @@ fn bench<'x>(test: &'x TestData, results: &mut HashMap<&str, Vec<TestResult<'x>>
             .entry(i.name)
             .or_insert(Vec::new())
             .push(TestResult {
-                scenario_name: i.name,
                 impl_name: &test.name,
-                run_time: elapsed.as_millis(),
+                run_time: elapsed,
                 no_allocs: stats.allocations + stats.reallocations,
                 max_memory: stats.bytes_allocated,
                 extra: TestResultExtra::default(),
@@ -142,29 +146,43 @@ fn main() -> Result<()> {
     }
     println!();
 
-    for tests in results.values_mut() {
+    for (scenario, mut tests) in results {
         let mut ascii_table = AsciiTable::default();
         ascii_table.set_max_width(200);
-        ascii_table.column(0).set_header("scenario");
-        ascii_table.column(1).set_header("impl");
-        ascii_table.column(2).set_header("run");
-        ascii_table.column(3).set_header("slower(run)");
-        ascii_table.column(4).set_header("no. allocs");
-        ascii_table.column(5).set_header("max memory");
+        ascii_table
+            .column(0)
+            .set_header(format!("scenario: {scenario}"))
+            .set_align(Align::Center);
+        ascii_table
+            .column(1)
+            .set_header("run")
+            .set_align(Align::Right);
+        ascii_table
+            .column(2)
+            .set_header("slower(run)")
+            .set_align(Align::Right);
+        ascii_table
+            .column(3)
+            .set_header("no. allocs")
+            .set_align(Align::Right);
+        ascii_table
+            .column(4)
+            .set_header("max memory")
+            .set_align(Align::Right);
 
-        let min_run = tests.iter().map(|x| x.run_time).min().unwrap() as f64;
+        let min_run = tests.iter().map(|x| x.run_time.as_millis()).min().unwrap() as f64;
         for i in tests.iter_mut() {
             i.extra = TestResultExtra {
-                slower_run: format!("{:.02}x", i.run_time as f64 / min_run),
+                run_time: format!("{:?}", i.run_time),
+                slower_run: format!("{:.02}x", i.run_time.as_millis() as f64 / min_run),
                 max_memory: format_size(i.max_memory, BINARY),
             };
         }
 
-        let it = tests.iter().map(|x| -> [&dyn Display; 6] {
+        let it = tests.iter().map(|x| -> [&dyn Display; 5] {
             [
-                &x.scenario_name,
                 &x.impl_name,
-                &x.run_time,
+                &x.extra.run_time,
                 &x.extra.slower_run,
                 &x.no_allocs,
                 &x.extra.max_memory,
