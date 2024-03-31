@@ -1,56 +1,62 @@
+mod scenarios;
 mod solutions;
 
-use tests_api::{Handle, RawLoadTestsResult, RawTestData};
+use scenarios::{PushDeleteScenario, Scenario, SumScenario};
+use tests_api::{Handle, RawImpl, RawLoadResult, RawScenario};
 
-macro_rules! sol {
+const fn scenario<S: Scenario>(name: &'static str) -> RawScenario {
+    extern "C" fn new<S: Scenario>() -> Handle {
+        let s = Box::new(S::new());
+        let ptr = Box::into_raw(s);
+
+        ptr as Handle
+    }
+    extern "C" fn run<S: Scenario>(handle: Handle) {
+        let ptr = handle as *mut S;
+        let obj = unsafe { Box::from_raw(ptr) };
+        obj.run();
+    }
+
+    RawScenario {
+        name: name.as_ptr(),
+        name_size: name.len(),
+        new: new::<S>,
+        run: run::<S>,
+    }
+}
+
+macro_rules! list_impl {
     ($name:ident) => {{
-        extern "C" fn create(nodes: usize) -> Handle {
-            let sol = Box::new(solutions::$name::DoubleLinkedList::new(nodes));
-            let ptr = Box::into_raw(sol);
-
-            ptr as Handle
-        }
-        extern "C" fn destroy(handle: Handle) {
-            let ptr = handle as *mut solutions::$name::DoubleLinkedList;
-            let _ = unsafe { Box::from_raw(ptr) };
-        }
-        extern "C" fn add(handle: Handle, element: u64) {
-            let ptr = handle as *mut solutions::$name::DoubleLinkedList;
-            let obj = unsafe { &mut *ptr };
-            obj.add(element);
-        }
-        extern "C" fn sum_all(handle: Handle) -> u64 {
-            let ptr = handle as *mut solutions::$name::DoubleLinkedList;
-            let obj = unsafe { &mut *ptr };
-            obj.sum_all()
-        }
+        const SCENARIOS: &[RawScenario] = &[
+            scenario::<SumScenario<solutions::$name::Implementation<u64>>>("sum"),
+            scenario::<PushDeleteScenario<solutions::$name::Implementation<u64>>>("push_delete"),
+        ];
 
         const NAME: &str = stringify!($name);
-        RawTestData {
+        RawImpl {
             name: NAME.as_ptr(),
             name_size: NAME.len(),
-            create,
-            destroy,
-            add,
-            sum_all,
+            scenarios: SCENARIOS.as_ptr(),
+            scenarios_count: SCENARIOS.len(),
         }
     }};
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn load_tests() -> RawLoadTestsResult {
-    const TESTS: &[RawTestData] = &[
-        sol!(index_impl),
-        sol!(handle_impl),
-        sol!(nonnull_impl),
-        sol!(rc_impl),
-        sol!(slotmap_impl),
-        sol!(std_linked_list_impl),
-        sol!(std_map_impl),
+pub unsafe extern "C" fn load_tests() -> RawLoadResult {
+    const LIST_IMPLS: &[RawImpl] = &[
+        list_impl!(handle_impl),
+        list_impl!(slotmap_impl),
+        // sol!(index_impl),
+        // sol!(nonnull_impl),
+        // sol!(rc_impl),
+        // sol!(slotmap_impl),
+        // sol!(std_linked_list_impl),
+        // sol!(std_map_impl),
     ];
 
-    RawLoadTestsResult {
-        tests: TESTS.as_ptr(),
-        tests_count: TESTS.len(),
+    RawLoadResult {
+        list_impl: LIST_IMPLS.as_ptr(),
+        list_impl_count: LIST_IMPLS.len(),
     }
 }

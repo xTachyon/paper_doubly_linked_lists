@@ -4,11 +4,30 @@ use super::DoubleLinkedList;
 
 static mut GLOBAL_HANDLE_UNIQUE_ID: u32 = 0;
 
-#[derive(Copy, Clone, PartialEq, Eq)]
+#[derive(Eq)]
 pub struct Handle<T> {
     index: u32,
     unique_id: u32,
     _type: PhantomData<T>,
+}
+impl<T> Copy for Handle<T> {}
+impl<T> Clone for Handle<T> {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+impl<T> PartialEq for Handle<T> {
+    fn eq(&self, other: &Self) -> bool {
+        self.index == other.index && self.unique_id == other.unique_id
+    }
+}
+impl<T> std::fmt::Debug for Handle<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Handle")
+            .field("index", &self.index)
+            .field("unique_id", &self.unique_id)
+            .finish()
+    }
 }
 impl<T> Handle<T> {
     pub const INVALID: Handle<T> = Handle {
@@ -123,7 +142,7 @@ impl<T> DoubleLinkedList<T> for Implementation<T> {
         } else {
             return;
         }
-        self.link(p,n);
+        self.link(p, n);
         if (node.index == self.head.index) && (node.unique_id == self.head.unique_id) {
             self.head = n;
         }

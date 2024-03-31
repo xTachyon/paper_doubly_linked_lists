@@ -1,6 +1,8 @@
+#[allow(dead_code)] // TODO
 pub trait DoubleLinkedList<T> {
-    type Node;
-    fn new(capacity: usize)->Self;
+    type Node: Copy + PartialEq + std::fmt::Debug;
+
+    fn new(capacity: usize) -> Self;
     fn insert_after(&mut self, node: Self::Node, value: T) -> Self::Node;
     fn insert_before(&mut self, node: Self::Node, value: T) -> Self::Node;
     fn push_back(&mut self, value: T) -> Self::Node;

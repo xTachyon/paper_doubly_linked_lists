@@ -1,16 +1,17 @@
 [workspace]
-members = [ "cpp_tests_build",
+members = [
     "runner",
     "rust_tests",
     "tests_api",
-    "cpp_tests_build",
+    # "cpp_tests_build",
+    # "cpp_tests_build",
 ]
 
 resolver = "2"
 
 [workspace.dependencies]
 tests_api = { path = "tests_api" }
-cpp_tests_build = { path = "cpp_tests_build" }
+# cpp_tests_build = { path = "cpp_tests_build" }
 
 anyhow = "1"
 libloading = "0.8.3"

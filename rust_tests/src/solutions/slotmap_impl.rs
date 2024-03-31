@@ -1,54 +1,116 @@
-use slotmap::{new_key_type, SlotMap};
+use super::double_linked_list::DoubleLinkedList;
+use slotmap::SlotMap;
+use std::fmt::Debug;
 
-new_key_type! { struct Key; }
+type DefaultKey = slotmap::DefaultKey;
 
 #[allow(dead_code)]
-struct Node {
-    next: Option<Key>,
-    prec: Option<Key>,
-    value: u64,
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct Node<T: Debug> {
+    next: Option<DefaultKey>,
+    prec: Option<DefaultKey>,
+    value: T,
 }
 
-pub struct DoubleLinkedList {
-    map: SlotMap<Key, Node>,
-    head: Key,
-    tail: Key,
+pub struct Implementation<T: Debug> {
+    map: SlotMap<DefaultKey, Node<T>>,
+    head: Option<DefaultKey>,
+    tail: Option<DefaultKey>,
 }
 
-impl DoubleLinkedList {
-    pub fn new(capacity: usize) -> DoubleLinkedList {
-        let mut map = SlotMap::with_capacity_and_key(capacity);
-        let node = map.insert(Node {
-            next: None,
-            prec: None,
-            value: 0,
-        });
-        DoubleLinkedList {
-            map,
-            head: node,
-            tail: node,
+impl<T: Debug + PartialEq + Copy> DoubleLinkedList<T> for Implementation<T> {
+    type Node = DefaultKey;
+
+    fn new(capacity: usize) -> Self {
+        Self {
+            map: SlotMap::with_capacity_and_key(capacity),
+            head: None,
+            tail: None,
         }
     }
-    pub fn add(&mut self, value: u64) {
-        let new_node = Node {
-            next: None,
-            prec: Some(self.tail),
-            value,
-        };
-        let new_node_key = self.map.insert(new_node);
-        self.map[self.tail].next = Some(new_node_key);
-        self.tail = new_node_key;
-    }
-    pub fn sum_all(&self) -> u64 {
-        let mut sum = 0;
 
-        let mut node = Some(self.head);
-        while let Some(current) = node {
-            let current = &self.map[current];
-            sum += current.value;
-            node = current.next;
+    fn insert_after(&mut self, _node: Self::Node, _value: T) -> Self::Node {
+        todo!()
+    }
+
+    fn insert_before(&mut self, _node: Self::Node, _value: T) -> Self::Node {
+        todo!()
+    }
+
+    fn push_back(&mut self, value: T) -> Self::Node {
+        if let (Some(head), Some(tail)) = (self.head, self.tail) {
+            let node = Node {
+                next: None,
+                prec: Some(tail),
+                value,
+            };
+            let key = self.map.insert(node);
+            self.map[tail].next = Some(key);
+            self.head = Some(head);
+            self.tail = Some(key);
+            key
+        } else {
+            // first node
+            let node = Node {
+                next: None,
+                prec: None,
+                value,
+            };
+            let key = self.map.insert(node);
+            self.head = Some(key);
+            self.tail = Some(key);
+            key
+        }
+    }
+
+    fn push_top(&mut self, _value: T) -> Self::Node {
+        todo!()
+    }
+
+    fn delete(&mut self, key: Self::Node) {
+        let node = self.map[key];
+        let prec = node.prec;
+        let next = node.next;
+
+        if let Some(prec) = prec {
+            self.map[prec].next = next;
+        }
+        if let Some(next) = next {
+            self.map[next].prec = prec;
         }
 
-        sum
+        if self.head == Some(key) {
+            self.head = next;                
+        }
+        if self.tail == Some(key) {
+            self.tail = prec;
+        }
+
+        self.map.remove(key);
+    }
+
+    fn next(&self, node: Self::Node) -> Option<Self::Node> {
+        let node = self.map.get(node)?;
+        node.next
+    }
+
+    fn prec(&self, _node: Self::Node) -> Option<Self::Node> {
+        todo!()
+    }
+
+    fn first(&self) -> Option<Self::Node> {
+        self.head
+    }
+
+    fn last(&self) -> Option<Self::Node> {
+        self.tail
+    }
+
+    fn value(&self, node: Self::Node) -> Option<&T> {
+        self.map.get(node).map(|x| &x.value)
+    }
+
+    fn value_mut(&mut self, _node: Self::Node) -> Option<&mut T> {
+        todo!()
     }
 }

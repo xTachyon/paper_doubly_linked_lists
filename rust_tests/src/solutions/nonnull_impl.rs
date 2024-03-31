@@ -1,7 +1,7 @@
 use super::DoubleLinkedList;
 use std::ptr::NonNull;
 
-struct Node<T> {
+pub struct Node<T> {
     next: Option<NonNull<Node<T>>>,
     prec: Option<NonNull<Node<T>>>,
     value: T,
