@@ -12,7 +12,7 @@ pub type FnScenarioRun = extern "C" fn(handle: Handle);
 pub struct RawScenario {
     pub name: *const u8,
     pub name_size: usize,
-    
+
     pub new: FnScenarioNew,
     pub run: FnScenarioRun,
 }
@@ -21,7 +21,7 @@ pub struct RawScenario {
 pub struct RawImpl {
     pub name: *const u8,
     pub name_size: usize,
-    
+
     pub scenarios: *const RawScenario,
     pub scenarios_count: usize,
 }

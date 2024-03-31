@@ -80,7 +80,7 @@ impl<T: Debug + PartialEq + Copy> DoubleLinkedList<T> for Implementation<T> {
         }
 
         if self.head == Some(key) {
-            self.head = next;                
+            self.head = next;
         }
         if self.tail == Some(key) {
             self.tail = prec;
