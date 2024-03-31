@@ -10,3 +10,4 @@ crate-type = ["dylib"]
 tests_api.workspace = true
 
 slotmap.workspace = true
+stats_alloc.workspace = true

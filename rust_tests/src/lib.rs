@@ -1,8 +1,14 @@
 mod scenarios;
 mod solutions;
 
+use std::alloc::System;
+
 use scenarios::{PushDeleteScenario, Scenario, SumScenario};
+use stats_alloc::{StatsAlloc, INSTRUMENTED_SYSTEM};
 use tests_api::{Handle, RawImpl, RawLoadResult, RawScenario};
+
+#[global_allocator]
+static GLOBAL: &StatsAlloc<System> = &INSTRUMENTED_SYSTEM;
 
 const fn scenario<S: Scenario>(name: &'static str) -> RawScenario {
     extern "C" fn new<S: Scenario>() -> Handle {
@@ -42,6 +48,10 @@ macro_rules! list_impl {
     }};
 }
 
+extern "C" fn get_alloc() -> &'static StatsAlloc<System> {
+    &GLOBAL
+}
+
 #[no_mangle]
 pub unsafe extern "C" fn load_tests() -> RawLoadResult {
     const LIST_IMPLS: &[RawImpl] = &[
@@ -58,5 +68,6 @@ pub unsafe extern "C" fn load_tests() -> RawLoadResult {
     RawLoadResult {
         list_impl: LIST_IMPLS.as_ptr(),
         list_impl_count: LIST_IMPLS.len(),
+        get_alloc,
     }
 }

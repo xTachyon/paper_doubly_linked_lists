@@ -1,9 +1,11 @@
 use anyhow::Result;
 use ascii_table::AsciiTable;
 use clap::Parser;
+use humansize::{format_size, BINARY};
 use libloading::{Library, Symbol};
-use std::{fmt::Display, mem::ManuallyDrop, time::Instant};
-use tests_api::{FnLoadTests, FnScenarioNew, FnScenarioRun, RawLoadResult};
+use stats_alloc::Region;
+use std::{collections::HashMap, fmt::Display, mem::ManuallyDrop, time::Instant};
+use tests_api::{FnGetAlloc, FnLoadTests, FnScenarioNew, FnScenarioRun, RawLoadResult};
 
 struct ScenarioData {
     name: &'static str,
@@ -14,6 +16,7 @@ struct ScenarioData {
 struct TestData {
     name: String,
     scenarios: Vec<ScenarioData>,
+    get_alloc: FnGetAlloc,
 }
 
 unsafe fn s(ptr: *const u8, size: usize) -> &'static str {
@@ -42,7 +45,11 @@ unsafe fn wrap_raw_tests(prefix: &str, raw_tests: RawLoadResult, tests: &mut Vec
             });
         }
 
-        tests.push(TestData { name, scenarios });
+        tests.push(TestData {
+            name,
+            scenarios,
+            get_alloc: raw_tests.get_alloc,
+        });
     }
 }
 
@@ -61,62 +68,43 @@ unsafe fn load(prefix: &str, path: &str, tests: &mut Vec<TestData>) -> Result<()
 #[derive(Default)]
 struct TestResultExtra {
     slower_run: String,
+    max_memory: String,
 }
+
 struct TestResult<'x> {
     scenario_name: &'x str,
     impl_name: &'x str,
     run_time: u128,
+    no_allocs: usize,
+    max_memory: usize,
     extra: TestResultExtra,
 }
 
-fn bench<'x>(test: &'x TestData, results: &mut Vec<TestResult<'x>>) {
+fn bench<'x>(test: &'x TestData, results: &mut HashMap<&str, Vec<TestResult<'x>>>) {
     println!("testing {}..", test.name);
 
     for i in test.scenarios.iter() {
+        let alloc = (test.get_alloc)();
+        let region = Region::new(alloc);
         let object = (i.new)();
         let time = Instant::now();
         (i.run)(object);
         let elapsed = time.elapsed();
+        let stats = region.change();
 
-        results.push(TestResult {
-            scenario_name: i.name,
-            impl_name: &test.name,
-            run_time: elapsed.as_millis(),
-            extra: TestResultExtra::default(),
-        });
+        results
+            .entry(i.name)
+            .or_insert(Vec::new())
+            .push(TestResult {
+                scenario_name: i.name,
+                impl_name: &test.name,
+                run_time: elapsed.as_millis(),
+                no_allocs: stats.allocations + stats.reallocations,
+                max_memory: stats.bytes_allocated,
+                extra: TestResultExtra::default(),
+            });
     }
 }
-
-// fn bench<'x>(test: &'x TestData, results: &mut Vec<TestResult<'x>>, iterations: u64) {
-//     println!("testing {}..", test.name);
-
-//     let time = Instant::now();
-//     let obj = (test.create)(iterations as usize + 1);
-//     for index in 0..iterations {
-//         (test.add)(obj, iterations - index);
-//     }
-//     let creation_time = time.elapsed();
-
-//     let time = Instant::now();
-//     let sum = (test.sum_all)(obj);
-//     let run_time = time.elapsed();
-
-//     assert_eq!(sum, iterations * (iterations + 1) / 2);
-
-//     let time = Instant::now();
-//     (test.destroy)(obj);
-//     let destroy_time = time.elapsed();
-
-//     let total_time = creation_time + run_time + destroy_time;
-//     results.push(TestResult {
-//         name: &test.name,
-//         creation_time: creation_time.as_millis(),
-//         run_time: run_time.as_millis(),
-//         destroy_time: destroy_time.as_millis(),
-//         total_time: total_time.as_millis(),
-//         extra: TestResultExtra::default(),
-//     });
-// }
 
 const DEFAULT_ITERATIONS: u64 = 10_000_000;
 
@@ -148,40 +136,42 @@ fn main() -> Result<()> {
         println!();
     };
 
-    let mut results = Vec::new();
+    let mut results = HashMap::new();
     for i in tests.iter() {
         bench(i, &mut results);
     }
     println!();
 
-    results.sort_by_key(|x| x.scenario_name);
+    for tests in results.values_mut() {
+        let mut ascii_table = AsciiTable::default();
+        ascii_table.set_max_width(200);
+        ascii_table.column(0).set_header("scenario");
+        ascii_table.column(1).set_header("impl");
+        ascii_table.column(2).set_header("run");
+        ascii_table.column(3).set_header("slower(run)");
+        ascii_table.column(4).set_header("no. allocs");
+        ascii_table.column(5).set_header("max memory");
 
-    let mut ascii_table = AsciiTable::default();
-    ascii_table.set_max_width(200);
-    ascii_table.column(0).set_header("scenario");
-    ascii_table.column(1).set_header("impl");
-    ascii_table.column(2).set_header("run");
-    ascii_table.column(3).set_header("slower(run)");
-    ascii_table.column(4).set_header("no. allocs");
-    ascii_table.column(5).set_header("max memory");
+        let min_run = tests.iter().map(|x| x.run_time).min().unwrap() as f64;
+        for i in tests.iter_mut() {
+            i.extra = TestResultExtra {
+                slower_run: format!("{:.02}x", i.run_time as f64 / min_run),
+                max_memory: format_size(i.max_memory, BINARY),
+            };
+        }
 
-    let min_run = results.iter().map(|x| x.run_time).min().unwrap() as f64;
-    for i in results.iter_mut() {
-        i.extra = TestResultExtra {
-            slower_run: format!("{:.02}x", i.run_time as f64 / min_run),
-            // max_memory: format_size(i.max_memory, BINARY),
-        };
+        let it = tests.iter().map(|x| -> [&dyn Display; 6] {
+            [
+                &x.scenario_name,
+                &x.impl_name,
+                &x.run_time,
+                &x.extra.slower_run,
+                &x.no_allocs,
+                &x.extra.max_memory,
+            ]
+        });
+        ascii_table.print(it);
     }
-
-    let it = results.iter().map(|x| -> [&dyn Display; 4] {
-        [
-            &x.scenario_name,
-            &x.impl_name,
-            &x.run_time,
-            &x.extra.slower_run,
-        ]
-    });
-    ascii_table.print(it);
 
     Ok(())
 }
