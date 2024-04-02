@@ -89,7 +89,14 @@ impl<T: Copy + PartialEq + Debug> DoubleLinkedList<T> for Implementation<T> {
     }
 
     fn push_top(&mut self, value: T) -> Self::Node {
-        if let Some(node) = self.head {
+        if let Some(mut node) = self.head {
+            let mut new_node = self.allocate(value);
+            unsafe {
+                new_node.as_mut().prec = self.head;
+                node.as_mut().next = Some(new_node);
+                self.head = Some(new_node);
+                Self::Node::from_internal(new_node.as_ref())
+            }
         } else {
             // first node
             let n = self.allocate(value);
@@ -100,7 +107,21 @@ impl<T: Copy + PartialEq + Debug> DoubleLinkedList<T> for Implementation<T> {
     }
 
     fn delete(&mut self, node: Self::Node) {
-        todo!()
+        unsafe {
+            let n = *(&node.ptr);
+            let prec = (*n).prec;
+            let next = (*n).next;
+            if let Some(mut p) = prec {
+                p.as_mut().next = next;
+            }
+            if let Some(mut n) = next {
+                n.as_mut().prec = prec;
+            }
+            // temp solution - in reality we need to check if n is head or tail and then update them
+            self.head = None;
+            self.tail = None;
+            let _ = Box::from_raw(n);
+        }
     }
 
     fn next(&self, node: Self::Node) -> Option<Self::Node> {
