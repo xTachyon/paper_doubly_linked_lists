@@ -1,14 +1,45 @@
 use super::DoubleLinkedList;
-use std::ptr::NonNull;
+use std::{fmt::Debug, ptr::NonNull};
 
-pub struct Node<T> {
-    next: Option<NonNull<Node<T>>>,
-    prec: Option<NonNull<Node<T>>>,
+struct InternalNode<T> {
+    next: Option<NonNull<InternalNode<T>>>,
+    prec: Option<NonNull<InternalNode<T>>>,
     value: T,
 }
 pub struct Implementation<T> {
-    head: Option<NonNull<Node<T>>>,
-    tail: Option<NonNull<Node<T>>>,
+    head: Option<NonNull<InternalNode<T>>>,
+    tail: Option<NonNull<InternalNode<T>>>,
+}
+
+
+pub struct Node<T> where T: Copy + PartialEq + std::fmt::Debug {
+    ptr: *mut InternalNode<T>
+}
+impl<T: Copy+PartialEq+Debug> Node<T> {
+    fn from_internal(internal: &InternalNode<T>)->Self {
+        Self {
+            ptr: (internal as *const InternalNode<T>) as *mut InternalNode<T> 
+        }
+    }
+}
+
+impl<T: Copy+PartialEq+Debug> Copy for Node<T> {}
+impl<T: Copy+PartialEq+Debug> Clone for Node<T> {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+impl<T:Copy+PartialEq+Debug> PartialEq for Node<T> {
+    fn eq(&self, other: &Self) -> bool {
+        self.ptr == other.ptr
+    }
+}
+impl<T:Copy+PartialEq+Debug> std::fmt::Debug for Node<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Node")
+            .field("ptr", &self.ptr)
+            .finish()
+    }
 }
 
 // impl Implementation {
@@ -52,7 +83,7 @@ pub struct Implementation<T> {
 //     }
 // }
 
-impl<T> DoubleLinkedList<T> for Implementation<T> {
+impl<T:Copy+PartialEq+Debug> DoubleLinkedList<T> for Implementation<T>  {
     type Node = Node<T>;
 
     fn new(capacity: usize) -> Self {
@@ -90,18 +121,26 @@ impl<T> DoubleLinkedList<T> for Implementation<T> {
     }
 
     fn first(&self) -> Option<Self::Node> {
-        todo!()
+        if let Some(first) = self.head {
+            unsafe { Some(Self::Node::from_internal(first.as_ref())) }
+        } else {
+            None
+        }
     }
 
     fn last(&self) -> Option<Self::Node> {
-        todo!()
+        if let Some(last) = self.tail {
+            unsafe { Some(Self::Node::from_internal(last.as_ref())) }
+        } else {
+            None
+        }
     }
 
     fn value(&self, node: Self::Node) -> Option<&T> {
-        todo!()
+        Some(unsafe { &(*node.ptr).value })
     }
 
     fn value_mut(&mut self, node: Self::Node) -> Option<&mut T> {
-        todo!()
+        Some(unsafe { &mut (*node.ptr).value })
     }
 }
