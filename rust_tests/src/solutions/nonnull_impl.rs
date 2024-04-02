@@ -11,82 +11,52 @@ pub struct Implementation<T> {
     tail: Option<NonNull<InternalNode<T>>>,
 }
 
-
-pub struct Node<T> where T: Copy + PartialEq + std::fmt::Debug {
-    ptr: *mut InternalNode<T>
+pub struct Node<T>
+where
+    T: Copy + PartialEq + std::fmt::Debug,
+{
+    ptr: *mut InternalNode<T>,
 }
-impl<T: Copy+PartialEq+Debug> Node<T> {
-    fn from_internal(internal: &InternalNode<T>)->Self {
+impl<T: Copy + PartialEq + Debug> Node<T> {
+    fn from_internal(internal: &InternalNode<T>) -> Self {
         Self {
-            ptr: (internal as *const InternalNode<T>) as *mut InternalNode<T> 
+            ptr: (internal as *const InternalNode<T>) as *mut InternalNode<T>,
         }
     }
 }
 
-impl<T: Copy+PartialEq+Debug> Copy for Node<T> {}
-impl<T: Copy+PartialEq+Debug> Clone for Node<T> {
+impl<T: Copy + PartialEq + Debug> Copy for Node<T> {}
+impl<T: Copy + PartialEq + Debug> Clone for Node<T> {
     fn clone(&self) -> Self {
         *self
     }
 }
-impl<T:Copy+PartialEq+Debug> PartialEq for Node<T> {
+impl<T: Copy + PartialEq + Debug> PartialEq for Node<T> {
     fn eq(&self, other: &Self) -> bool {
         self.ptr == other.ptr
     }
 }
-impl<T:Copy+PartialEq+Debug> std::fmt::Debug for Node<T> {
+impl<T: Copy + PartialEq + Debug> std::fmt::Debug for Node<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("Node")
-            .field("ptr", &self.ptr)
-            .finish()
+        f.debug_struct("Node").field("ptr", &self.ptr).finish()
     }
 }
 
-// impl Implementation {
-//     pub fn new(_capacity: usize) -> Self {
-//         let start_node = Box::into_raw(Box::new(InternalNode {
-//             next: None,
-//             prec: None,
-//             value: 0,
-//         }));
-//         Self {
-//             head: start_node,
-//             tail: start_node,
-//         }
-//     }
-//     pub fn add(&mut self, value: u64) {
-//         let new_node = Box::into_raw(Box::new(InternalNode {
-//             next: None,
-//             prec: None,
-//             value,
-//         }));
-//         unsafe {
-//             (*self.tail).next = Some(NonNull::new_unchecked(new_node));
-//             (*new_node).prec = Some(NonNull::new_unchecked(self.tail));
-//         }
-//         self.tail = new_node;
-//     }
-//     pub fn sum_all(&self) -> u64 {
-//         let mut sum = 0;
-//         let mut current = self.head;
-//         loop {
-//             unsafe {
-//                 sum += (*current).value;
-//                 if let Some(next) = (*current).next {
-//                     current = next.as_ptr();
-//                 } else {
-//                     break;
-//                 }
-//             }
-//         }
-//         sum
-//     }
-// }
+impl<T> Implementation<T> {
+    fn allocate(&mut self, value: T) -> NonNull<InternalNode<T>> {
+        let b: Box<InternalNode<T>> = Box::new(InternalNode {
+            next: None,
+            prec: None,
+            value,
+        });
+        unsafe { NonNull::new_unchecked(Box::into_raw(b)) }
+    }
+}
 
-impl<T:Copy+PartialEq+Debug> DoubleLinkedList<T> for Implementation<T>  {
+impl<T: Copy + PartialEq + Debug> DoubleLinkedList<T> for Implementation<T> {
     type Node = Node<T>;
 
-    fn new(capacity: usize) -> Self {
+    fn new(_capacity: usize) -> Self {
         Self {
             head: None,
             tail: None,
@@ -101,11 +71,32 @@ impl<T:Copy+PartialEq+Debug> DoubleLinkedList<T> for Implementation<T>  {
     }
 
     fn push_back(&mut self, value: T) -> Self::Node {
-        todo!()
+        if let Some(mut node) = self.tail {
+            let mut new_node = self.allocate(value);
+            unsafe {
+                new_node.as_mut().prec = self.tail;
+                node.as_mut().next = Some(new_node);
+                self.tail = Some(new_node);
+                Self::Node::from_internal(new_node.as_ref())
+            }
+        } else {
+            // first node
+            let n = self.allocate(value);
+            self.head = Some(n);
+            self.tail = Some(n);
+            unsafe { Self::Node::from_internal(n.as_ref()) }
+        }
     }
 
     fn push_top(&mut self, value: T) -> Self::Node {
-        todo!()
+        if let Some(node) = self.head {
+        } else {
+            // first node
+            let n = self.allocate(value);
+            self.head = Some(n);
+            self.tail = Some(n);
+            unsafe { Self::Node::from_internal(n.as_ref()) }
+        }
     }
 
     fn delete(&mut self, node: Self::Node) {
@@ -113,11 +104,19 @@ impl<T:Copy+PartialEq+Debug> DoubleLinkedList<T> for Implementation<T>  {
     }
 
     fn next(&self, node: Self::Node) -> Option<Self::Node> {
-        todo!()
+        if let Some(next) = unsafe { (*node.ptr).next } {
+            unsafe { Some(Self::Node::from_internal(next.as_ref())) }
+        } else {
+            None
+        }
     }
 
     fn prec(&self, node: Self::Node) -> Option<Self::Node> {
-        todo!()
+        if let Some(prec) = unsafe { (*node.ptr).prec } {
+            unsafe { Some(Self::Node::from_internal(prec.as_ref())) }
+        } else {
+            None
+        }
     }
 
     fn first(&self) -> Option<Self::Node> {
