@@ -19,7 +19,7 @@ pub struct Implementation<T: Debug> {
 }
 
 impl<T: Debug + PartialEq + Copy> DoubleLinkedList<T> for Implementation<T> {
-    type Node = DefaultKey;
+    type NodeRef = DefaultKey;
 
     fn new(capacity: usize) -> Self {
         Self {
@@ -29,15 +29,15 @@ impl<T: Debug + PartialEq + Copy> DoubleLinkedList<T> for Implementation<T> {
         }
     }
 
-    fn insert_after(&mut self, _node: Self::Node, _value: T) -> Self::Node {
+    fn insert_after(&mut self, _node: Self::NodeRef, _value: T) -> Self::NodeRef {
         todo!()
     }
 
-    fn insert_before(&mut self, _node: Self::Node, _value: T) -> Self::Node {
+    fn insert_before(&mut self, _node: Self::NodeRef, _value: T) -> Self::NodeRef {
         todo!()
     }
 
-    fn push_back(&mut self, value: T) -> Self::Node {
+    fn push_back(&mut self, value: T) -> Self::NodeRef {
         if let (Some(head), Some(tail)) = (self.head, self.tail) {
             let node = Node {
                 next: None,
@@ -63,11 +63,33 @@ impl<T: Debug + PartialEq + Copy> DoubleLinkedList<T> for Implementation<T> {
         }
     }
 
-    fn push_top(&mut self, _value: T) -> Self::Node {
-        todo!()
+    fn push_front(&mut self, value: T) -> Self::NodeRef {
+        if let (Some(head), Some(tail)) = (self.head, self.tail) {
+            let node = Node {
+                next: None,
+                prec: Some(head),
+                value,
+            };
+            let key = self.map.insert(node);
+            self.map[head].prec = Some(key);
+            self.head = Some(key);
+            self.tail = Some(tail);
+            key
+        } else {
+            // first node
+            let node = Node {
+                next: None,
+                prec: None,
+                value,
+            };
+            let key = self.map.insert(node);
+            self.head = Some(key);
+            self.tail = Some(key);
+            key
+        }
     }
 
-    fn delete(&mut self, key: Self::Node) {
+    unsafe fn delete(&mut self, key: Self::NodeRef) {
         let node = self.map[key];
         let prec = node.prec;
         let next = node.next;
@@ -89,28 +111,29 @@ impl<T: Debug + PartialEq + Copy> DoubleLinkedList<T> for Implementation<T> {
         self.map.remove(key);
     }
 
-    fn next(&self, node: Self::Node) -> Option<Self::Node> {
+    fn next(&self, node: Self::NodeRef) -> Option<Self::NodeRef> {
         let node = self.map.get(node)?;
         node.next
     }
 
-    fn prec(&self, _node: Self::Node) -> Option<Self::Node> {
-        todo!()
+    fn prec(&self, node: Self::NodeRef) -> Option<Self::NodeRef> {
+        let node = self.map.get(node)?;
+        node.prec
     }
 
-    fn first(&self) -> Option<Self::Node> {
+    fn first(&self) -> Option<Self::NodeRef> {
         self.head
     }
 
-    fn last(&self) -> Option<Self::Node> {
+    fn last(&self) -> Option<Self::NodeRef> {
         self.tail
     }
 
-    fn value(&self, node: Self::Node) -> Option<&T> {
+    fn value(&self, node: Self::NodeRef) -> Option<&T> {
         self.map.get(node).map(|x| &x.value)
     }
 
-    fn value_mut(&mut self, _node: Self::Node) -> Option<&mut T> {
+    fn value_mut(&mut self, _node: Self::NodeRef) -> Option<&mut T> {
         todo!()
     }
 }

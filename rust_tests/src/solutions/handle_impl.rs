@@ -59,11 +59,12 @@ struct Element<T> {
 }
 pub struct Implementation<T> {
     data: Vec<Option<Element<T>>>,
+    // TODO: rename to first, last
     head: Handle<T>,
     tail: Handle<T>,
 }
 impl<T> DoubleLinkedList<T> for Implementation<T> {
-    type Node = Handle<T>;
+    type NodeRef = Handle<T>;
 
     fn new(capacity: usize) -> Self {
         Self {
@@ -73,7 +74,7 @@ impl<T> DoubleLinkedList<T> for Implementation<T> {
         }
     }
 
-    fn insert_after(&mut self, node: Self::Node, value: T) -> Self::Node {
+    fn insert_after(&mut self, node: Self::NodeRef, value: T) -> Self::NodeRef {
         if self.data.is_empty() {
             return self.add_first_element(value);
         } else {
@@ -88,7 +89,7 @@ impl<T> DoubleLinkedList<T> for Implementation<T> {
         }
     }
 
-    fn insert_before(&mut self, node: Self::Node, value: T) -> Self::Node {
+    fn insert_before(&mut self, node: Self::NodeRef, value: T) -> Self::NodeRef {
         if self.data.is_empty() {
             return self.add_first_element(value);
         } else {
@@ -107,7 +108,7 @@ impl<T> DoubleLinkedList<T> for Implementation<T> {
         }
     }
 
-    fn push_back(&mut self, value: T) -> Self::Node {
+    fn push_back(&mut self, value: T) -> Self::NodeRef {
         if self.data.is_empty() {
             return self.add_first_element(value);
         } else {
@@ -118,7 +119,7 @@ impl<T> DoubleLinkedList<T> for Implementation<T> {
         }
     }
 
-    fn push_top(&mut self, value: T) -> Self::Node {
+    fn push_front(&mut self, value: T) -> Self::NodeRef {
         if self.data.is_empty() {
             return self.add_first_element(value);
         } else {
@@ -129,7 +130,7 @@ impl<T> DoubleLinkedList<T> for Implementation<T> {
         }
     }
 
-    fn delete(&mut self, node: Self::Node) {
+    unsafe fn delete(&mut self, node: Self::NodeRef) {
         let count = self.data.len();
         if node.index as usize >= count {
             return;
@@ -152,7 +153,7 @@ impl<T> DoubleLinkedList<T> for Implementation<T> {
         self.data[node.index as usize] = None;
     }
 
-    fn next(&self, node: Self::Node) -> Option<Self::Node> {
+    fn next(&self, node: Self::NodeRef) -> Option<Self::NodeRef> {
         if let Some(e) = self.element(node) {
             if e.next.is_valid() {
                 return Some(e.next);
@@ -163,7 +164,7 @@ impl<T> DoubleLinkedList<T> for Implementation<T> {
         None
     }
 
-    fn prec(&self, node: Self::Node) -> Option<Self::Node> {
+    fn prec(&self, node: Self::NodeRef) -> Option<Self::NodeRef> {
         if let Some(e) = self.element(node) {
             if e.prec.is_valid() {
                 return Some(e.prec);
@@ -174,28 +175,28 @@ impl<T> DoubleLinkedList<T> for Implementation<T> {
         None
     }
 
-    fn first(&self) -> Option<Self::Node> {
+    fn first(&self) -> Option<Self::NodeRef> {
         if self.head.is_valid() {
             return Some(self.head);
         }
         None
     }
 
-    fn last(&self) -> Option<Self::Node> {
+    fn last(&self) -> Option<Self::NodeRef> {
         if self.tail.is_valid() {
             return Some(self.tail);
         }
         None
     }
 
-    fn value(&self, node: Self::Node) -> Option<&T> {
+    fn value(&self, node: Self::NodeRef) -> Option<&T> {
         if let Some(e) = self.element(node) {
             return Some(&e.value);
         }
         None
     }
 
-    fn value_mut(&mut self, node: Self::Node) -> Option<&mut T> {
+    fn value_mut(&mut self, node: Self::NodeRef) -> Option<&mut T> {
         if let Some(e) = self.element_mut(node) {
             return Some(&mut e.value);
         }

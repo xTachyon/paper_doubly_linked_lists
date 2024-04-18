@@ -54,7 +54,7 @@ impl<T> Implementation<T> {
 }
 
 impl<T: Copy + PartialEq + Debug> DoubleLinkedList<T> for Implementation<T> {
-    type Node = Node<T>;
+    type NodeRef = Node<T>;
 
     fn new(_capacity: usize) -> Self {
         Self {
@@ -62,51 +62,51 @@ impl<T: Copy + PartialEq + Debug> DoubleLinkedList<T> for Implementation<T> {
             tail: None,
         }
     }
-    fn insert_after(&mut self, node: Self::Node, value: T) -> Self::Node {
+    fn insert_after(&mut self, _node: Self::NodeRef, _value: T) -> Self::NodeRef {
         todo!()
     }
 
-    fn insert_before(&mut self, node: Self::Node, value: T) -> Self::Node {
+    fn insert_before(&mut self, _node: Self::NodeRef, _value: T) -> Self::NodeRef {
         todo!()
     }
 
-    fn push_back(&mut self, value: T) -> Self::Node {
+    fn push_back(&mut self, value: T) -> Self::NodeRef {
         if let Some(mut node) = self.tail {
             let mut new_node = self.allocate(value);
             unsafe {
                 new_node.as_mut().prec = self.tail;
                 node.as_mut().next = Some(new_node);
                 self.tail = Some(new_node);
-                Self::Node::from_internal(new_node.as_ref())
+                Self::NodeRef::from_internal(new_node.as_ref())
             }
         } else {
             // first node
             let n = self.allocate(value);
             self.head = Some(n);
             self.tail = Some(n);
-            unsafe { Self::Node::from_internal(n.as_ref()) }
+            unsafe { Self::NodeRef::from_internal(n.as_ref()) }
         }
     }
 
-    fn push_top(&mut self, value: T) -> Self::Node {
+    fn push_front(&mut self, value: T) -> Self::NodeRef {
         if let Some(mut node) = self.head {
             let mut new_node = self.allocate(value);
             unsafe {
                 new_node.as_mut().prec = self.head;
                 node.as_mut().next = Some(new_node);
                 self.head = Some(new_node);
-                Self::Node::from_internal(new_node.as_ref())
+                Self::NodeRef::from_internal(new_node.as_ref())
             }
         } else {
             // first node
             let n = self.allocate(value);
             self.head = Some(n);
             self.tail = Some(n);
-            unsafe { Self::Node::from_internal(n.as_ref()) }
+            unsafe { Self::NodeRef::from_internal(n.as_ref()) }
         }
     }
 
-    fn delete(&mut self, node: Self::Node) {
+    unsafe fn delete(&mut self, node: Self::NodeRef) {
         unsafe {
             let n = *(&node.ptr);
             let prec = (*n).prec;
@@ -124,43 +124,43 @@ impl<T: Copy + PartialEq + Debug> DoubleLinkedList<T> for Implementation<T> {
         }
     }
 
-    fn next(&self, node: Self::Node) -> Option<Self::Node> {
+    fn next(&self, node: Self::NodeRef) -> Option<Self::NodeRef> {
         if let Some(next) = unsafe { (*node.ptr).next } {
-            unsafe { Some(Self::Node::from_internal(next.as_ref())) }
+            unsafe { Some(Self::NodeRef::from_internal(next.as_ref())) }
         } else {
             None
         }
     }
 
-    fn prec(&self, node: Self::Node) -> Option<Self::Node> {
+    fn prec(&self, node: Self::NodeRef) -> Option<Self::NodeRef> {
         if let Some(prec) = unsafe { (*node.ptr).prec } {
-            unsafe { Some(Self::Node::from_internal(prec.as_ref())) }
+            unsafe { Some(Self::NodeRef::from_internal(prec.as_ref())) }
         } else {
             None
         }
     }
 
-    fn first(&self) -> Option<Self::Node> {
+    fn first(&self) -> Option<Self::NodeRef> {
         if let Some(first) = self.head {
-            unsafe { Some(Self::Node::from_internal(first.as_ref())) }
+            unsafe { Some(Self::NodeRef::from_internal(first.as_ref())) }
         } else {
             None
         }
     }
 
-    fn last(&self) -> Option<Self::Node> {
+    fn last(&self) -> Option<Self::NodeRef> {
         if let Some(last) = self.tail {
-            unsafe { Some(Self::Node::from_internal(last.as_ref())) }
+            unsafe { Some(Self::NodeRef::from_internal(last.as_ref())) }
         } else {
             None
         }
     }
 
-    fn value(&self, node: Self::Node) -> Option<&T> {
+    fn value(&self, node: Self::NodeRef) -> Option<&T> {
         Some(unsafe { &(*node.ptr).value })
     }
 
-    fn value_mut(&mut self, node: Self::Node) -> Option<&mut T> {
+    fn value_mut(&mut self, node: Self::NodeRef) -> Option<&mut T> {
         Some(unsafe { &mut (*node.ptr).value })
     }
 }

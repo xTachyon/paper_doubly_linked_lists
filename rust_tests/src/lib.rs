@@ -3,14 +3,14 @@ mod solutions;
 
 use std::alloc::System;
 
-use scenarios::{PushDeleteScenario, Scenario, SumScenario};
+use scenarios::Scenario;
 use stats_alloc::{StatsAlloc, INSTRUMENTED_SYSTEM};
 use tests_api::{Handle, RawImpl, RawLoadResult, RawScenario};
 
 #[global_allocator]
 static GLOBAL: &StatsAlloc<System> = &INSTRUMENTED_SYSTEM;
 
-const fn scenario<S: Scenario>(name: &'static str) -> RawScenario {
+const fn s<S: Scenario>(name: &'static str) -> RawScenario {
     unsafe extern "C" fn new<S: Scenario>() -> Handle {
         let s = Box::new(S::new());
         let ptr = Box::into_raw(s);
@@ -33,9 +33,17 @@ const fn scenario<S: Scenario>(name: &'static str) -> RawScenario {
 
 macro_rules! list_impl {
     ($name:ident) => {{
+        use scenarios::*;
+
         const SCENARIOS: &[RawScenario] = &[
-            scenario::<SumScenario<solutions::$name::Implementation<u64>>>("sum"),
-            scenario::<PushDeleteScenario<solutions::$name::Implementation<u64>>>("push_delete"),
+            s::<First<solutions::$name::Implementation<u64>>>("first"),
+            s::<Last<solutions::$name::Implementation<u64>>>("last"),
+            s::<Last<solutions::$name::Implementation<u64>>>("order"),
+            s::<SearchMiddle<solutions::$name::Implementation<u64>>>("search_middle"),
+            s::<SumScenario<solutions::$name::Implementation<u64>>>("sum"),
+            s::<PushDeleteOneScenario<solutions::$name::Implementation<u64>>>("push_delete_one"),
+            s::<PushScenario<solutions::$name::Implementation<u64>>>("push"),
+            s::<Fragmentation<solutions::$name::Implementation<u64>>>("fragmentation"),
         ];
 
         const NAME: &str = stringify!($name);

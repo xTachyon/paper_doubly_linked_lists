@@ -1,17 +1,33 @@
 #[allow(dead_code)] // TODO
 pub trait DoubleLinkedList<T> {
-    type Node: Copy + PartialEq + std::fmt::Debug;
+    type NodeRef: Copy + PartialEq + std::fmt::Debug;
 
+    /// Creates a list.
     fn new(capacity: usize) -> Self;
-    fn insert_after(&mut self, node: Self::Node, value: T) -> Self::Node;
-    fn insert_before(&mut self, node: Self::Node, value: T) -> Self::Node;
-    fn push_back(&mut self, value: T) -> Self::Node;
-    fn push_top(&mut self, value: T) -> Self::Node;
-    fn delete(&mut self, node: Self::Node);
-    fn next(&self, node: Self::Node) -> Option<Self::Node>;
-    fn prec(&self, node: Self::Node) -> Option<Self::Node>;
-    fn first(&self) -> Option<Self::Node>;
-    fn last(&self) -> Option<Self::Node>;
-    fn value(&self, node: Self::Node) -> Option<&T>;
-    fn value_mut(&mut self, node: Self::Node) -> Option<&mut T>;
+
+    fn insert_after(&mut self, node: Self::NodeRef, value: T) -> Self::NodeRef;
+    fn insert_before(&mut self, node: Self::NodeRef, value: T) -> Self::NodeRef;
+    fn push_back(&mut self, value: T) -> Self::NodeRef;
+    fn push_front(&mut self, value: T) -> Self::NodeRef;
+
+    unsafe fn delete(&mut self, node: Self::NodeRef);
+
+    fn next(&self, node: Self::NodeRef) -> Option<Self::NodeRef>;
+    fn prec(&self, node: Self::NodeRef) -> Option<Self::NodeRef>;
+    fn search<F: Fn(&T) -> bool>(&self, f: F) -> Option<Self::NodeRef> {
+        let mut it = self.first();
+        while let Some(x) = it {
+            if f(self.value(x)?) {
+                return Some(x);
+            }
+            it = self.next(x);
+        }
+        None
+    }
+
+    fn first(&self) -> Option<Self::NodeRef>;
+    fn last(&self) -> Option<Self::NodeRef>;
+
+    fn value(&self, node: Self::NodeRef) -> Option<&T>;
+    fn value_mut(&mut self, node: Self::NodeRef) -> Option<&mut T>;
 }
