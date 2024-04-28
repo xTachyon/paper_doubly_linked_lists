@@ -1,11 +1,11 @@
-use tests_api::alloc::ArenaAlloc;
+use tests_api::TheAlloc;
 
 #[allow(dead_code)] // TODO
 pub trait DoubleLinkedList<'x, T> {
     type NodeRef: Copy + PartialEq + std::fmt::Debug;
 
     /// Creates a list.
-    fn new(alloc: &'x ArenaAlloc, capacity: usize) -> Self;
+    fn new(alloc: &'x TheAlloc, capacity: usize) -> Self;
 
     fn insert_after(&mut self, node: Self::NodeRef, value: T) -> Self::NodeRef;
     fn insert_before(&mut self, node: Self::NodeRef, value: T) -> Self::NodeRef;

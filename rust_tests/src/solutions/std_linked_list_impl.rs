@@ -1,6 +1,6 @@
 use std::collections::LinkedList;
 
-use tests_api::alloc::ArenaAlloc;
+use tests_api::TheAlloc;
 
 use super::double_linked_list::DoubleLinkedList;
 
@@ -11,7 +11,7 @@ pub struct Implementation<T> {
 impl<'x, T> DoubleLinkedList<'x, T> for Implementation<T> {
     type NodeRef = *const u8;
 
-    fn new(_alloc: &ArenaAlloc, _capacity: usize) -> Self {
+    fn new(_alloc: &TheAlloc, _capacity: usize) -> Self {
         todo!()
     }
 

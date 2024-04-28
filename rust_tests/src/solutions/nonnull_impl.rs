@@ -1,4 +1,4 @@
-use tests_api::alloc::ArenaAlloc;
+use tests_api::TheAlloc;
 
 use super::DoubleLinkedList;
 use std::{fmt::Debug, ptr::NonNull};
@@ -11,7 +11,7 @@ struct InternalNode<T> {
 pub struct Implementation<'x, T> {
     head: Option<NonNull<InternalNode<T>>>,
     tail: Option<NonNull<InternalNode<T>>>,
-    alloc: &'x ArenaAlloc,
+    alloc: &'x TheAlloc,
 }
 
 pub struct Node<T>
@@ -45,7 +45,7 @@ impl<T: Copy + PartialEq + Debug> std::fmt::Debug for Node<T> {
     }
 }
 
-type Box<'x, T> = std::boxed::Box<T, &'x ArenaAlloc>;
+type Box<'x, T> = std::boxed::Box<T, &'x TheAlloc>;
 
 impl<'x, T> Implementation<'x, T> {
     fn allocate(&mut self, value: T) -> NonNull<InternalNode<T>> {
@@ -64,7 +64,7 @@ impl<'x, T> Implementation<'x, T> {
 impl<'x, T: Copy + PartialEq + Debug> DoubleLinkedList<'x, T> for Implementation<'x, T> {
     type NodeRef = Node<T>;
 
-    fn new(alloc: &'x ArenaAlloc, _capacity: usize) -> Self {
+    fn new(alloc: &'x TheAlloc, _capacity: usize) -> Self {
         Self {
             head: None,
             tail: None,

@@ -1,6 +1,6 @@
 use super::double_linked_list::DoubleLinkedList;
 use slotmap::SlotMap;
-use tests_api::alloc::ArenaAlloc;
+use tests_api::TheAlloc;
 use std::fmt::Debug;
 
 type DefaultKey = slotmap::DefaultKey;
@@ -14,7 +14,7 @@ pub struct Node<T: Debug> {
 }
 
 pub struct Implementation<'x, T: Debug> {
-    map: SlotMap<DefaultKey, Node<T>, &'x ArenaAlloc>,
+    map: SlotMap<DefaultKey, Node<T>, &'x TheAlloc>,
     head: Option<DefaultKey>,
     tail: Option<DefaultKey>,
 }
@@ -22,7 +22,7 @@ pub struct Implementation<'x, T: Debug> {
 impl<'x, T: Debug + PartialEq + Copy> DoubleLinkedList<'x, T> for Implementation<'x, T> {
     type NodeRef = DefaultKey;
 
-    fn new(alloc: &'x ArenaAlloc, capacity: usize) -> Self {
+    fn new(alloc: &'x TheAlloc, capacity: usize) -> Self {
         Self {
             map: SlotMap::with_capacity_and_key_in(capacity, alloc),
             head: None,

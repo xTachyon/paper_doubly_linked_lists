@@ -1,5 +1,4 @@
-use tests_api::alloc::ArenaAlloc;
-
+use tests_api::TheAlloc;
 use super::DoubleLinkedList;
 
 struct Element<T> {
@@ -8,7 +7,7 @@ struct Element<T> {
     value: T,
 }
 pub struct Implementation<'x, T> {
-    data: Vec<Option<Element<T>>, &'x ArenaAlloc>,
+    data: Vec<Option<Element<T>>, &'x TheAlloc>,
     // TODO: rename to first, last
     head: u32,
     tail: u32,
@@ -16,7 +15,7 @@ pub struct Implementation<'x, T> {
 impl<'x, T> DoubleLinkedList<'x, T> for Implementation<'x, T> {
     type NodeRef = u32;
 
-    fn new(alloc: &'x ArenaAlloc, capacity: usize) -> Self {
+    fn new(alloc: &'x TheAlloc, capacity: usize) -> Self {
         Self {
             data: Vec::with_capacity_in(capacity, alloc),
             head: u32::MAX,

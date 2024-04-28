@@ -11,7 +11,7 @@ use std::{
     mem::ManuallyDrop,
     time::{Duration, Instant},
 };
-use tests_api::{alloc::ArenaAlloc, FnLoadTests, FnScenarioNew, FnScenarioRun, RawLoadResult};
+use tests_api::{FnLoadTests, FnScenarioNew, FnScenarioRun, RawLoadResult, TheAlloc};
 
 struct ScenarioData {
     name: &'static str,
@@ -81,20 +81,17 @@ struct TestResult<'x> {
     extra: TestResultExtra,
 }
 
-fn bench<'x>(
-    test: &'x TestData,
-    results: &mut HashMap<&str, Vec<TestResult<'x>>>,
-    alloc: &mut ArenaAlloc,
-) {
+fn bench<'x>(test: &'x TestData, results: &mut HashMap<&str, Vec<TestResult<'x>>>) {
     println!("testing {}..", test.name);
 
     for i in test.scenarios.iter() {
-        alloc.reset();
-        let object = unsafe { (i.new)(alloc) };
+        let alloc = TheAlloc::new();
+
+        let object = unsafe { (i.new)(&alloc) };
         let time = Instant::now();
         unsafe { (i.run)(object) };
         let elapsed = time.elapsed();
-        let stats = alloc.stats();
+        // let stats = alloc.stats();
 
         results
             .entry(i.name)
@@ -102,8 +99,8 @@ fn bench<'x>(
             .push(TestResult {
                 impl_name: &test.name,
                 run_time: elapsed,
-                no_allocs: stats.no_allocs,
-                max_memory: stats.max_allocated,
+                no_allocs: 0,
+                max_memory: 0,
                 extra: TestResultExtra::default(),
             });
     }
@@ -128,7 +125,6 @@ const DL_NAMES: (&str, &str) = if cfg!(target_os = "windows") {
 };
 
 fn main() -> Result<()> {
-    let mut arena = ArenaAlloc::new(2 * 1024 * 1024 * 1024);
     // let args = Args::parse();
     // println!("iterations={}", args.iterations);
 
@@ -142,7 +138,7 @@ fn main() -> Result<()> {
 
     let mut results = HashMap::new();
     for i in tests.iter() {
-        bench(i, &mut results, &mut arena);
+        bench(i, &mut results);
     }
     println!();
 
