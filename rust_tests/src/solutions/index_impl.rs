@@ -1,67 +1,26 @@
-use std::marker::PhantomData;
-
 use tests_api::alloc::ArenaAlloc;
 
 use super::DoubleLinkedList;
 
-#[derive(Eq)]
-pub struct Handle<T> {
-    index: u32,
-    _type: PhantomData<T>,
-}
-impl<T> Copy for Handle<T> {}
-impl<T> Clone for Handle<T> {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-impl<T> PartialEq for Handle<T> {
-    fn eq(&self, other: &Self) -> bool {
-        self.index == other.index
-    }
-}
-impl<T> std::fmt::Debug for Handle<T> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("Index")
-            .field("index", &self.index)
-            .finish()
-    }
-}
-impl<T> Handle<T> {
-    pub const INVALID: Handle<T> = Handle {
-        index: 0xFFFFFFFF,
-        _type: PhantomData,
-    };
-    pub fn new(index: u32) -> Handle<T> {
-        Self {
-            index,
-            _type: PhantomData,
-        }
-    }
-    #[inline(always)]
-    fn is_valid(&self) -> bool {
-        self.index != 0xFFFF_FFFF
-    }
-}
 struct Element<T> {
-    next: Handle<T>,
-    prec: Handle<T>,
+    next: u32,
+    prec: u32,
     value: T,
 }
 pub struct Implementation<'x, T> {
     data: Vec<Option<Element<T>>, &'x ArenaAlloc>,
     // TODO: rename to first, last
-    head: Handle<T>,
-    tail: Handle<T>,
+    head: u32,
+    tail: u32,
 }
 impl<'x, T> DoubleLinkedList<'x, T> for Implementation<'x, T> {
-    type NodeRef = Handle<T>;
+    type NodeRef = u32;
 
     fn new(alloc: &'x ArenaAlloc, capacity: usize) -> Self {
         Self {
             data: Vec::with_capacity_in(capacity, alloc),
-            head: Handle::INVALID,
-            tail: Handle::INVALID,
+            head: u32::MAX,
+            tail: u32::MAX,
         }
     }
 
@@ -70,10 +29,10 @@ impl<'x, T> DoubleLinkedList<'x, T> for Implementation<'x, T> {
             return self.add_first_element(value);
         } else {
             let new_node = self.allocate(value);
-            let cnode_next = self.data[node.index as usize].as_ref().unwrap().next;
+            let cnode_next = self.data[node as usize].as_ref().unwrap().next;
             self.link(node, new_node);
             self.link(new_node, cnode_next);
-            if node.index == self.tail.index {
+            if node == self.tail {
                 self.tail = new_node;
             }
             new_node
@@ -84,17 +43,17 @@ impl<'x, T> DoubleLinkedList<'x, T> for Implementation<'x, T> {
         if self.data.is_empty() {
             return self.add_first_element(value);
         } else {
-            if node.is_valid() {
+            if node != u32::MAX {
                 let new_node = self.allocate(value);
-                let cnode_prec = self.data[node.index as usize].as_ref().unwrap().prec;
+                let cnode_prec = self.data[node as usize].as_ref().unwrap().prec;
                 self.link(new_node, node);
                 self.link(cnode_prec, new_node);
-                if node.index == self.head.index {
+                if node == self.head {
                     self.head = new_node;
                 }
                 new_node
             } else {
-                Handle::INVALID
+                u32::MAX
             }
         }
     }
@@ -123,30 +82,30 @@ impl<'x, T> DoubleLinkedList<'x, T> for Implementation<'x, T> {
 
     unsafe fn delete(&mut self, node: Self::NodeRef) {
         let count = self.data.len();
-        if node.index as usize >= count {
+        if node as usize >= count {
             return;
         }
         let p;
         let n;
-        if let Some(elem) = self.data[node.index as usize].as_ref() {
+        if let Some(elem) = self.data[node as usize].as_ref() {
             p = elem.prec;
             n = elem.next;
         } else {
             return;
         }
         self.link(p, n);
-        if node.index == self.head.index {
+        if node == self.head {
             self.head = n;
         }
-        if node.index == self.tail.index {
+        if node == self.tail {
             self.tail = p;
         }
-        self.data[node.index as usize] = None;
+        self.data[node as usize] = None;
     }
 
     fn next(&self, node: Self::NodeRef) -> Option<Self::NodeRef> {
         if let Some(e) = self.element(node) {
-            if e.next.is_valid() {
+            if e.next != u32::MAX {
                 return Some(e.next);
             } else {
                 return None;
@@ -157,7 +116,7 @@ impl<'x, T> DoubleLinkedList<'x, T> for Implementation<'x, T> {
 
     fn prec(&self, node: Self::NodeRef) -> Option<Self::NodeRef> {
         if let Some(e) = self.element(node) {
-            if e.prec.is_valid() {
+            if e.prec != u32::MAX {
                 return Some(e.prec);
             } else {
                 return None;
@@ -167,14 +126,14 @@ impl<'x, T> DoubleLinkedList<'x, T> for Implementation<'x, T> {
     }
 
     fn first(&self) -> Option<Self::NodeRef> {
-        if self.head.is_valid() {
+        if self.head != u32::MAX {
             return Some(self.head);
         }
         None
     }
 
     fn last(&self) -> Option<Self::NodeRef> {
-        if self.tail.is_valid() {
+        if self.tail != u32::MAX {
             return Some(self.tail);
         }
         None
@@ -196,19 +155,18 @@ impl<'x, T> DoubleLinkedList<'x, T> for Implementation<'x, T> {
 }
 
 impl<'x, T> Implementation<'x, T> {
-    fn allocate(&mut self, value: T) -> Handle<T> {
+    fn allocate(&mut self, value: T) -> u32 {
         let idx = self.data.len();
-        let h = Handle::new(idx as u32);
         self.data.push(Some(Element {
-            next: Handle::INVALID,
-            prec: Handle::INVALID,
+            next: u32::MAX,
+            prec: u32::MAX,
             value,
         }));
-        h
+        idx as u32
     }
-    fn link(&mut self, n1: Handle<T>, n2: Handle<T>) {
-        let idx1 = n1.index as usize;
-        let idx2 = n2.index as usize;
+    fn link(&mut self, n1: u32, n2: u32) {
+        let idx1 = n1 as usize;
+        let idx2 = n2 as usize;
         let count = self.data.len();
         if idx1 < count {
             self.data[idx1].as_mut().unwrap().next = n2;
@@ -217,20 +175,19 @@ impl<'x, T> Implementation<'x, T> {
             self.data[idx2].as_mut().unwrap().prec = n1;
         }
     }
-    fn add_first_element(&mut self, value: T) -> Handle<T> {
+    fn add_first_element(&mut self, value: T) -> u32 {
         // assume self.data is empty
-        let h = Handle::new(0);
         self.data.push(Some(Element {
-            next: Handle::INVALID,
-            prec: Handle::INVALID,
+            next: u32::MAX,
+            prec: u32::MAX,
             value,
         }));
-        self.head = h;
-        self.tail = h;
-        h
+        self.head = 0;
+        self.tail = 0;
+        0
     }
-    fn element(&self, handle: Handle<T>) -> Option<&Element<T>> {
-        let index = handle.index as usize;
+    fn element(&self, handle: u32) -> Option<&Element<T>> {
+        let index = handle as usize;
         if index < self.data.len() {
             self.data[index].as_ref()
         } else {
@@ -238,8 +195,8 @@ impl<'x, T> Implementation<'x, T> {
         }
     }
 
-    fn element_mut(&mut self, handle: Handle<T>) -> Option<&mut Element<T>> {
-        let index = handle.index as usize;
+    fn element_mut(&mut self, handle: u32) -> Option<&mut Element<T>> {
+        let index = handle as usize;
         if index < self.data.len() {
             self.data[index].as_mut()
         } else {
