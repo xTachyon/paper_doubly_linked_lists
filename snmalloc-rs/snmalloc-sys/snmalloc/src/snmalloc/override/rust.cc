@@ -54,14 +54,7 @@ extern "C" SNMALLOC_EXPORT void SNMALLOC_NAME_MANGLE(rust_statistics)(
 
 extern "C" SNMALLOC_EXPORT Alloc* SNMALLOC_NAME_MANGLE(rust_inst_create)()
 {
-  try
-  {
-    return new Alloc;
-  }
-  catch (...)
-  {
-    return nullptr;
-  }
+  return new Alloc;
 }
 
 extern "C" SNMALLOC_EXPORT void
