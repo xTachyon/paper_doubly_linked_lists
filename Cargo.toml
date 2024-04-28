@@ -15,7 +15,7 @@ tests_api = { path = "tests_api" }
 
 anyhow = "1"
 libloading = "0.8.3"
-slotmap = { path = "slotmap" }
+slotmap = "1"
 ascii_table = "4"
 clap = { version = "4", features = ["derive"] }
 cbindgen = "0.26.0"
@@ -24,3 +24,7 @@ humansize = "2"
 
 [profile.release]
 lto = "thin"
+
+
+[patch.crates-io]
+slotmap = { path = "slotmap" }
