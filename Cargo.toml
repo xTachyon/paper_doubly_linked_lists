@@ -15,7 +15,7 @@ tests_api = { path = "tests_api" }
 
 anyhow = "1"
 libloading = "0.8.3"
-slotmap = "1"
+slotmap = { path = "slotmap" }
 ascii_table = "4"
 clap = { version = "4", features = ["derive"] }
 cbindgen = "0.26.0"

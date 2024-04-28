@@ -13,18 +13,18 @@ pub struct Node<T: Debug> {
     value: T,
 }
 
-pub struct Implementation<T: Debug> {
-    map: SlotMap<DefaultKey, Node<T>>,
+pub struct Implementation<'x, T: Debug> {
+    map: SlotMap<DefaultKey, Node<T>, &'x ArenaAlloc>,
     head: Option<DefaultKey>,
     tail: Option<DefaultKey>,
 }
 
-impl<'x, T: Debug + PartialEq + Copy> DoubleLinkedList<'x, T> for Implementation<T> {
+impl<'x, T: Debug + PartialEq + Copy> DoubleLinkedList<'x, T> for Implementation<'x, T> {
     type NodeRef = DefaultKey;
 
-    fn new(alloc: &ArenaAlloc, capacity: usize) -> Self {
+    fn new(alloc: &'x ArenaAlloc, capacity: usize) -> Self {
         Self {
-            map: SlotMap::with_capacity_and_key(capacity),
+            map: SlotMap::with_capacity_and_key_in(capacity, alloc),
             head: None,
             tail: None,
         }
