@@ -21,7 +21,7 @@ impl<'x, L: DoubleLinkedList<'x, u64>> Scenario<'x> for SumScenario<L> {
     type Impl = L;
 
     fn new(alloc: &'x TheAlloc) -> Self {
-        let mut list = L::new(alloc, 0);
+        let mut list = L::new(alloc, 10_000_000);
         for i in 1..=10_000_000 {
             list.push_back(i);
         }
@@ -61,7 +61,7 @@ impl<'x, L: DoubleLinkedList<'x, u64>> Scenario<'x> for PushDeleteOneScenario<'x
     }
 
     fn run(self) {
-        let mut list = L::new(self.alloc, 0);
+        let mut list = L::new(self.alloc, ITERATIONS as usize);
         for i in 1..=ITERATIONS {
             let node = list.push_back(i);
             unsafe { list.delete(node) };
@@ -86,7 +86,7 @@ impl<'x, L: DoubleLinkedList<'x, u64>> Scenario<'x> for PushScenario<'x, L> {
 
     fn run(self) {
         let iterations = 10_000_000;
-        let mut list = L::new(self.alloc, 0);
+        let mut list = L::new(self.alloc, 10_000_000);
         for i in 1..=iterations {
             list.push_back(i);
         }
@@ -109,7 +109,7 @@ impl<'x, L: DoubleLinkedList<'x, u64>> Scenario<'x> for Fragmentation<'x, L> {
     }
 
     fn run(self) {
-        let mut list = L::new(self.alloc, 0);
+        let mut list = L::new(self.alloc, 1000);
         let mut to_delete = Vec::with_capacity(1000);
         for _ in 0..=1_000 {
             to_delete.clear();
@@ -227,7 +227,7 @@ impl<'x, L: DoubleLinkedList<'x, u64>> Scenario<'x> for SearchMiddle<L> {
     type Impl = L;
 
     fn new(alloc: &'x TheAlloc) -> Self {
-        let mut list = L::new(alloc, 0);
+        let mut list = L::new(alloc, 10_000_000);
         for i in 1..=10_000_000 {
             list.push_back(i);
         }
