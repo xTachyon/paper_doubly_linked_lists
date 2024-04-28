@@ -1,3 +1,5 @@
+use tests_api::alloc::ArenaAlloc;
+
 use super::DoubleLinkedList;
 use std::{fmt::Debug, ptr::NonNull};
 
@@ -53,10 +55,10 @@ impl<T> Implementation<T> {
     }
 }
 
-impl<T: Copy + PartialEq + Debug> DoubleLinkedList<T> for Implementation<T> {
+impl<'x, T: Copy + PartialEq + Debug> DoubleLinkedList<'x, T> for Implementation<T> {
     type NodeRef = Node<T>;
 
-    fn new(_capacity: usize) -> Self {
+    fn new(alloc: &ArenaAlloc, _capacity: usize) -> Self {
         Self {
             head: None,
             tail: None,

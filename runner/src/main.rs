@@ -1,16 +1,17 @@
+#![feature(allocator_api)]
+
 use anyhow::Result;
 use ascii_table::{Align, AsciiTable};
 use clap::Parser;
 use humansize::{format_size, BINARY};
 use libloading::{Library, Symbol};
-use stats_alloc::Region;
 use std::{
     collections::HashMap,
     fmt::Display,
     mem::ManuallyDrop,
     time::{Duration, Instant},
 };
-use tests_api::{FnGetAlloc, FnLoadTests, FnScenarioNew, FnScenarioRun, RawLoadResult};
+use tests_api::{alloc::ArenaAlloc, FnLoadTests, FnScenarioNew, FnScenarioRun, RawLoadResult};
 
 struct ScenarioData {
     name: &'static str,
@@ -21,7 +22,6 @@ struct ScenarioData {
 struct TestData {
     name: String,
     scenarios: Vec<ScenarioData>,
-    get_alloc: FnGetAlloc,
 }
 
 unsafe fn s(ptr: *const u8, size: usize) -> &'static str {
@@ -50,11 +50,7 @@ unsafe fn wrap_raw_tests(prefix: &str, raw_tests: RawLoadResult, tests: &mut Vec
             });
         }
 
-        tests.push(TestData {
-            name,
-            scenarios,
-            get_alloc: raw_tests.get_alloc,
-        });
+        tests.push(TestData { name, scenarios });
     }
 }
 
@@ -85,17 +81,20 @@ struct TestResult<'x> {
     extra: TestResultExtra,
 }
 
-fn bench<'x>(test: &'x TestData, results: &mut HashMap<&str, Vec<TestResult<'x>>>) {
+fn bench<'x>(
+    test: &'x TestData,
+    results: &mut HashMap<&str, Vec<TestResult<'x>>>,
+    alloc: &mut ArenaAlloc,
+) {
     println!("testing {}..", test.name);
 
     for i in test.scenarios.iter() {
-        let alloc = (test.get_alloc)();
-        let region = Region::new(alloc);
-        let object = unsafe { (i.new)() };
+        alloc.reset();
+        let object = unsafe { (i.new)(alloc) };
         let time = Instant::now();
         unsafe { (i.run)(object) };
         let elapsed = time.elapsed();
-        let stats = region.change();
+        let stats = alloc.stats();
 
         results
             .entry(i.name)
@@ -103,8 +102,8 @@ fn bench<'x>(test: &'x TestData, results: &mut HashMap<&str, Vec<TestResult<'x>>
             .push(TestResult {
                 impl_name: &test.name,
                 run_time: elapsed,
-                no_allocs: stats.allocations + stats.reallocations,
-                max_memory: stats.bytes_allocated,
+                no_allocs: stats.no_allocs,
+                max_memory: stats.max_allocated,
                 extra: TestResultExtra::default(),
             });
     }
@@ -129,6 +128,7 @@ const DL_NAMES: (&str, &str) = if cfg!(target_os = "windows") {
 };
 
 fn main() -> Result<()> {
+    let mut arena = ArenaAlloc::new(2 * 1024 * 1024 * 1024);
     // let args = Args::parse();
     // println!("iterations={}", args.iterations);
 
@@ -142,7 +142,7 @@ fn main() -> Result<()> {
 
     let mut results = HashMap::new();
     for i in tests.iter() {
-        bench(i, &mut results);
+        bench(i, &mut results, &mut arena);
     }
     println!();
 

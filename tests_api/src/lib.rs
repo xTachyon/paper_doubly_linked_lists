@@ -1,11 +1,13 @@
-use std::{alloc::System, ffi::c_void};
+#![feature(allocator_api)]
 
-use stats_alloc::StatsAlloc;
+pub mod alloc;
+
+use std::ffi::c_void;
+use alloc::ArenaAlloc;
 
 pub type Handle = *mut c_void;
 
-pub type FnGetAlloc = extern "C" fn() -> &'static StatsAlloc<System>;
-pub type FnScenarioNew = unsafe extern "C" fn() -> Handle;
+pub type FnScenarioNew = unsafe extern "C" fn(alloc: *const ArenaAlloc) -> Handle;
 pub type FnScenarioRun = unsafe extern "C" fn(handle: Handle);
 
 #[repr(C)]
@@ -30,7 +32,6 @@ pub struct RawImpl {
 pub struct RawLoadResult {
     pub list_impl: *const RawImpl,
     pub list_impl_count: usize,
-    pub get_alloc: FnGetAlloc,
 }
 
 pub type FnLoadTests = unsafe extern "C" fn() -> RawLoadResult;

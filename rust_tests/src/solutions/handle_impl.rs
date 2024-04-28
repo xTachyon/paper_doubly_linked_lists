@@ -1,5 +1,7 @@
 use std::marker::PhantomData;
 
+use tests_api::alloc::ArenaAlloc;
+
 use super::DoubleLinkedList;
 
 static mut GLOBAL_HANDLE_UNIQUE_ID: u32 = 0;
@@ -57,18 +59,18 @@ struct Element<T> {
     value: T,
     unique_id: u32,
 }
-pub struct Implementation<T> {
-    data: Vec<Option<Element<T>>>,
+pub struct Implementation<'x, T> {
+    data: Vec<Option<Element<T>>, &'x ArenaAlloc>,
     // TODO: rename to first, last
     head: Handle<T>,
     tail: Handle<T>,
 }
-impl<T> DoubleLinkedList<T> for Implementation<T> {
+impl<'x, T> DoubleLinkedList<'x, T> for Implementation<'x, T> {
     type NodeRef = Handle<T>;
 
-    fn new(capacity: usize) -> Self {
+    fn new(alloc: &'x ArenaAlloc, capacity: usize) -> Self {
         Self {
-            data: Vec::with_capacity(capacity),
+            data: Vec::with_capacity_in(capacity, alloc),
             head: Handle::INVALID,
             tail: Handle::INVALID,
         }
@@ -204,7 +206,7 @@ impl<T> DoubleLinkedList<T> for Implementation<T> {
     }
 }
 
-impl<T> Implementation<T> {
+impl<'x, T> Implementation<'x, T> {
     fn allocate(&mut self, value: T) -> Handle<T> {
         let idx = self.data.len();
         let h = Handle::new(idx as u32);

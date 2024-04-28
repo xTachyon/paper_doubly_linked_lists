@@ -1,3 +1,5 @@
+#![feature(allocator_api)]
+
 mod scenarios;
 mod solutions;
 
@@ -5,19 +7,19 @@ use std::alloc::System;
 
 use scenarios::Scenario;
 use stats_alloc::{StatsAlloc, INSTRUMENTED_SYSTEM};
-use tests_api::{Handle, RawImpl, RawLoadResult, RawScenario};
+use tests_api::{alloc::ArenaAlloc, Handle, RawImpl, RawLoadResult, RawScenario};
 
 #[global_allocator]
 static GLOBAL: &StatsAlloc<System> = &INSTRUMENTED_SYSTEM;
 
-const fn s<S: Scenario>(name: &'static str) -> RawScenario {
-    unsafe extern "C" fn new<S: Scenario>() -> Handle {
-        let s = Box::new(S::new());
+const fn s<'x, S: Scenario<'x>>(name: &'static str) -> RawScenario {
+    unsafe extern "C" fn new<'x, S: Scenario<'x>>(alloc: *const ArenaAlloc) -> Handle {
+        let s = Box::new(S::new(&*alloc));
         let ptr = Box::into_raw(s);
 
         ptr as Handle
     }
-    unsafe extern "C" fn run<S: Scenario>(handle: Handle) {
+    unsafe extern "C" fn run<'x, S: Scenario<'x>>(handle: Handle) {
         let ptr = handle as *mut S;
         let obj = Box::from_raw(ptr);
         obj.run();
@@ -56,10 +58,6 @@ macro_rules! list_impl {
     }};
 }
 
-extern "C" fn get_alloc() -> &'static StatsAlloc<System> {
-    &GLOBAL
-}
-
 #[no_mangle]
 pub unsafe extern "C" fn load_tests() -> RawLoadResult {
     const LIST_IMPLS: &[RawImpl] = &[
@@ -77,6 +75,5 @@ pub unsafe extern "C" fn load_tests() -> RawLoadResult {
     RawLoadResult {
         list_impl: LIST_IMPLS.as_ptr(),
         list_impl_count: LIST_IMPLS.len(),
-        get_alloc,
     }
 }
