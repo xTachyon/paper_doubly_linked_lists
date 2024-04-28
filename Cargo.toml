@@ -21,6 +21,7 @@ clap = { version = "4", features = ["derive"] }
 cbindgen = "0.26.0"
 stats_alloc = { version = "0.1.10", features = ["nightly"] }
 humansize = "2"
+snmalloc-sys = "0.3.5"
 
 [profile.release]
 lto = "thin"
@@ -28,3 +29,4 @@ lto = "thin"
 
 [patch.crates-io]
 slotmap = { path = "slotmap" }
+snmalloc-sys = { path = "snmalloc-rs/snmalloc-sys" }

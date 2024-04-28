@@ -7,13 +7,13 @@ use std::alloc::System;
 
 use scenarios::Scenario;
 use stats_alloc::{StatsAlloc, INSTRUMENTED_SYSTEM};
-use tests_api::{alloc::ArenaAlloc, Handle, RawImpl, RawLoadResult, RawScenario};
+use tests_api::{TheAlloc, Handle, RawImpl, RawLoadResult, RawScenario};
 
 #[global_allocator]
 static GLOBAL: &StatsAlloc<System> = &INSTRUMENTED_SYSTEM;
 
 const fn s<'x, S: Scenario<'x>>(name: &'static str) -> RawScenario {
-    unsafe extern "C" fn new<'x, S: Scenario<'x>>(alloc: *const ArenaAlloc) -> Handle {
+    unsafe extern "C" fn new<'x, S: Scenario<'x>>(alloc: *const TheAlloc) -> Handle {
         let s = Box::new(S::new(&*alloc));
         let ptr = Box::into_raw(s);
 
