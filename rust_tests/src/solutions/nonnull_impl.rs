@@ -8,9 +8,10 @@ struct InternalNode<T> {
     prec: Option<NonNull<InternalNode<T>>>,
     value: T,
 }
-pub struct Implementation<T> {
+pub struct Implementation<'x, T> {
     head: Option<NonNull<InternalNode<T>>>,
     tail: Option<NonNull<InternalNode<T>>>,
+    alloc: &'x ArenaAlloc,
 }
 
 pub struct Node<T>
@@ -44,24 +45,30 @@ impl<T: Copy + PartialEq + Debug> std::fmt::Debug for Node<T> {
     }
 }
 
-impl<T> Implementation<T> {
+type Box<'x, T> = std::boxed::Box<T, &'x ArenaAlloc>;
+
+impl<'x, T> Implementation<'x, T> {
     fn allocate(&mut self, value: T) -> NonNull<InternalNode<T>> {
-        let b: Box<InternalNode<T>> = Box::new(InternalNode {
-            next: None,
-            prec: None,
-            value,
-        });
+        let b = Box::new_in(
+            InternalNode {
+                next: None,
+                prec: None,
+                value,
+            },
+            self.alloc,
+        );
         unsafe { NonNull::new_unchecked(Box::into_raw(b)) }
     }
 }
 
-impl<'x, T: Copy + PartialEq + Debug> DoubleLinkedList<'x, T> for Implementation<T> {
+impl<'x, T: Copy + PartialEq + Debug> DoubleLinkedList<'x, T> for Implementation<'x, T> {
     type NodeRef = Node<T>;
 
-    fn new(alloc: &ArenaAlloc, _capacity: usize) -> Self {
+    fn new(alloc: &'x ArenaAlloc, _capacity: usize) -> Self {
         Self {
             head: None,
             tail: None,
+            alloc,
         }
     }
     fn insert_after(&mut self, _node: Self::NodeRef, _value: T) -> Self::NodeRef {
@@ -122,7 +129,7 @@ impl<'x, T: Copy + PartialEq + Debug> DoubleLinkedList<'x, T> for Implementation
             // temp solution - in reality we need to check if n is head or tail and then update them
             self.head = None;
             self.tail = None;
-            let _ = Box::from_raw(n);
+            let _ = Box::from_raw_in(n, self.alloc);
         }
     }
 
