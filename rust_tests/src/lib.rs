@@ -3,18 +3,18 @@
 mod scenarios;
 mod solutions;
 
-use std::alloc::System;
+use std::alloc::Allocator;
 
 use scenarios::Scenario;
-use stats_alloc::{StatsAlloc, INSTRUMENTED_SYSTEM};
-use tests_api::{TheAlloc, Handle, RawImpl, RawLoadResult, RawScenario};
-
-#[global_allocator]
-static GLOBAL: &StatsAlloc<System> = &INSTRUMENTED_SYSTEM;
+use tests_api::{Handle, RawImpl, RawLoadResult, RawScenario};
 
 const fn s<'x, S: Scenario<'x>>(name: &'static str) -> RawScenario {
-    unsafe extern "C" fn new<'x, S: Scenario<'x>>(alloc: *const TheAlloc) -> Handle {
-        let s = Box::new(S::new(&*alloc));
+    // TODO: + 'static?
+    unsafe extern "C" fn new<'x, S: Scenario<'x>>(
+        alloc: *const *const (dyn Allocator + 'static),
+    ) -> Handle {
+        let alloc = &**alloc;
+        let s = Box::new(S::new(alloc));
         let ptr = Box::into_raw(s);
 
         ptr as Handle

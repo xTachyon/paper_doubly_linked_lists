@@ -2,12 +2,13 @@
 
 mod alloc;
 pub mod snalloc;
+pub mod stats_alloc;
 
-use std::ffi::c_void;
+use std::{alloc::Allocator, ffi::c_void};
 
 pub type Handle = *mut c_void;
 
-pub type FnScenarioNew = unsafe extern "C" fn(alloc: *const TheAlloc) -> Handle;
+pub type FnScenarioNew = unsafe extern "C" fn(alloc: *const *const dyn Allocator) -> Handle;
 pub type FnScenarioRun = unsafe extern "C" fn(handle: Handle);
 
 #[repr(C)]
@@ -39,4 +40,4 @@ pub type FnLoadTests = unsafe extern "C" fn() -> RawLoadResult;
 #[no_mangle]
 pub extern "C" fn ignore_this_cbindgen_needs_to_find_stuff(_: FnLoadTests) {}
 
-pub type TheAlloc = snalloc::SnAlloc;
+pub type TheAlloc = dyn Allocator;

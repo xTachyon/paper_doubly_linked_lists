@@ -6,12 +6,15 @@ use clap::Parser;
 use humansize::{format_size, BINARY};
 use libloading::{Library, Symbol};
 use std::{
+    alloc::{Allocator, Global},
     collections::HashMap,
     fmt::Display,
     mem::ManuallyDrop,
     time::{Duration, Instant},
 };
-use tests_api::{FnLoadTests, FnScenarioNew, FnScenarioRun, RawLoadResult, TheAlloc};
+use tests_api::{
+    stats_alloc::StatsAllocator, FnLoadTests, FnScenarioNew, FnScenarioRun, RawLoadResult,
+};
 
 struct ScenarioData {
     name: &'static str,
@@ -85,22 +88,24 @@ fn bench<'x>(test: &'x TestData, results: &mut HashMap<&str, Vec<TestResult<'x>>
     println!("testing {}..", test.name);
 
     for i in test.scenarios.iter() {
-        let alloc = TheAlloc::new();
+        let alloc = StatsAllocator::new(Box::leak(Box::new(Global)) as &_);
 
-        let object = unsafe { (i.new)(&alloc) };
+        let alloc_ptr: *const dyn Allocator = &alloc;
+        let alloc_ptr = &alloc_ptr;
+        let object = unsafe { (i.new)(alloc_ptr) };
+        alloc.reset_time();
         let time = Instant::now();
         unsafe { (i.run)(object) };
         let elapsed = time.elapsed();
-        // let stats = alloc.stats();
 
         results
             .entry(i.name)
             .or_insert(Vec::new())
             .push(TestResult {
                 impl_name: &test.name,
-                run_time: elapsed,
-                no_allocs: 0,
-                max_memory: 0,
+                run_time: elapsed - alloc.time(),
+                no_allocs: alloc.no_allocs(),
+                max_memory: alloc.max_allocated(),
                 extra: TestResultExtra::default(),
             });
     }
