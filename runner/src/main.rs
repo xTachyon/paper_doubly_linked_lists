@@ -4,10 +4,10 @@ use anyhow::Result;
 use ascii_table::{Align, AsciiTable};
 use clap::Parser;
 use humansize::{format_size, BINARY};
+use indexmap::IndexMap;
 use libloading::{Library, Symbol};
 use std::{
     alloc::{Allocator, Global},
-    collections::HashMap,
     fmt::Display,
     mem::ManuallyDrop,
     time::{Duration, Instant},
@@ -78,6 +78,7 @@ struct TestResultExtra {
 }
 
 struct TestResult<'x> {
+    scenario: &'x str,
     impl_name: &'x str,
     run_time: Duration,
     no_allocs: usize,
@@ -87,7 +88,7 @@ struct TestResult<'x> {
 
 fn bench<'x>(
     test: &'x TestData,
-    results: &mut HashMap<&str, Vec<TestResult<'x>>>,
+    results: &mut IndexMap<&str, Vec<TestResult<'x>>>,
     allocator_kind: AllocatorKind,
 ) {
     println!("testing {}..", test.name);
@@ -108,6 +109,7 @@ fn bench<'x>(
             .entry(i.name)
             .or_insert(Vec::new())
             .push(TestResult {
+                scenario: i.name,
                 impl_name: &test.name,
                 run_time: elapsed - alloc.time(),
                 no_allocs: alloc.no_allocs(),
@@ -154,20 +156,19 @@ impl AllocatorKind {
             AllocatorKind::Sn => "sn",
         }
     }
-}
-
-fn parse_allocator_kind(name: &str) -> AllocatorKind {
-    match name {
-        "default" | "system" => AllocatorKind::System,
-        "arena" => AllocatorKind::Arena,
-        "sn" => AllocatorKind::Sn,
-        _ => panic!("unknown allocator: {name}"),
+    fn parse(name: &str) -> AllocatorKind {
+        match name {
+            "default" | "system" => AllocatorKind::System,
+            "arena" => AllocatorKind::Arena,
+            "sn" => AllocatorKind::Sn,
+            _ => panic!("unknown allocator: {name}"),
+        }
     }
 }
 
 fn main() -> Result<()> {
     let args = Args::parse();
-    let allocator_kind = parse_allocator_kind(&args.allocator);
+    let allocator_kind = AllocatorKind::parse(&args.allocator);
     println!("allocator: {}", allocator_kind.name());
 
     let mut tests = Vec::with_capacity(16);
@@ -178,56 +179,57 @@ fn main() -> Result<()> {
         println!();
     };
 
-    let mut results = HashMap::new();
+    let mut results = IndexMap::new();
     for i in tests.iter() {
         bench(i, &mut results, allocator_kind);
     }
     println!();
 
-    for (scenario, mut tests) in results {
-        let mut ascii_table = AsciiTable::default();
-        ascii_table.set_max_width(200);
-        ascii_table
-            .column(0)
-            .set_header(format!("scenario: {scenario}"))
-            .set_align(Align::Center);
-        ascii_table
-            .column(1)
-            .set_header("run")
-            .set_align(Align::Right);
-        ascii_table
-            .column(2)
-            .set_header("slower(run)")
-            .set_align(Align::Right);
-        ascii_table
-            .column(3)
-            .set_header("no. allocs")
-            .set_align(Align::Right);
-        ascii_table
-            .column(4)
-            .set_header("max memory")
-            .set_align(Align::Right);
-
+    let mut output: Vec<[&dyn Display; 6]> = Vec::with_capacity(64);
+    for tests in results.values_mut() {
         let min_run = tests.iter().map(|x| x.run_time.as_millis()).min().unwrap() as f64;
-        for i in tests.iter_mut() {
+        for i in tests {
             i.extra = TestResultExtra {
                 run_time: format!("{:?}", i.run_time),
                 slower_run: format!("{:.02}x", i.run_time.as_millis() as f64 / min_run),
                 max_memory: format_size(i.max_memory, BINARY),
             };
-        }
 
-        let it = tests.iter().map(|x| -> [&dyn Display; 5] {
-            [
-                &x.impl_name,
-                &x.extra.run_time,
-                &x.extra.slower_run,
-                &x.no_allocs,
-                &x.extra.max_memory,
-            ]
-        });
-        ascii_table.print(it);
+            output.push([
+                &i.scenario,
+                &i.impl_name,
+                &i.extra.run_time,
+                &i.extra.slower_run,
+                &i.no_allocs,
+                &i.extra.max_memory,
+            ]);
+        }
+        output.push([&"---", &"---", &"---", &"---", &"---", &"---"]);
     }
+    let mut ascii_table = AsciiTable::default();
+    ascii_table.set_max_width(200);
+    ascii_table
+        .column(0)
+        .set_header("scenario")
+        .set_align(Align::Center);
+    ascii_table
+        .column(1)
+        .set_header("run")
+        .set_align(Align::Right);
+    ascii_table
+        .column(2)
+        .set_header("slower(run)")
+        .set_align(Align::Right);
+    ascii_table
+        .column(3)
+        .set_header("no. allocs")
+        .set_align(Align::Right);
+    ascii_table
+        .column(4)
+        .set_header("max memory")
+        .set_align(Align::Right);
+
+    ascii_table.print(output.iter());
 
     Ok(())
 }
