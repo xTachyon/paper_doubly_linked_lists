@@ -2,7 +2,7 @@
 
 use anyhow::Result;
 use ascii_table::{Align, AsciiTable};
-use clap::Parser;
+use clap::{arg, Parser};
 use humansize::{format_size, BINARY};
 use indexmap::IndexMap;
 use libloading::{Library, Symbol};
@@ -14,7 +14,7 @@ use std::{
 };
 use tests_api::{
     arena_alloc::ArenaAlloc, snalloc::SnAlloc, stats_alloc::StatsAllocator, FnLoadTests,
-    FnScenarioNew, FnScenarioRun, RawLoadResult,
+    FnScenarioNew, FnScenarioRun, RawLoadResult, RawScenarioInit, RawScenarioKind,
 };
 
 struct ScenarioData {
@@ -34,7 +34,13 @@ unsafe fn s(ptr: *const u8, size: usize) -> &'static str {
     name
 }
 
-unsafe fn wrap_raw_tests(prefix: &str, raw_tests: RawLoadResult, tests: &mut Vec<TestData>) {
+unsafe fn wrap_raw_tests(
+    prefix: &str,
+    raw_tests: RawLoadResult,
+    tests: &mut Vec<TestData>,
+    is_bench: bool,
+    is_validation: bool,
+) {
     for i in 0..raw_tests.list_impl_count {
         let current = &*raw_tests.list_impl.add(i);
 
@@ -44,6 +50,14 @@ unsafe fn wrap_raw_tests(prefix: &str, raw_tests: RawLoadResult, tests: &mut Vec
         let mut scenarios = Vec::with_capacity(16);
         for i in 0..current.scenarios_count {
             let current = &*current.scenarios.add(i);
+
+            let add = match (&current.kind, is_bench, is_validation) {
+                (RawScenarioKind::Bench, true, _) | (RawScenarioKind::Validation, _, true) => true,
+                _ => false,
+            };
+            if !add {
+                continue;
+            }
 
             let name = s(current.name, current.name_size);
 
@@ -58,14 +72,20 @@ unsafe fn wrap_raw_tests(prefix: &str, raw_tests: RawLoadResult, tests: &mut Vec
     }
 }
 
-unsafe fn load(prefix: &str, path: &str, tests: &mut Vec<TestData>) -> Result<()> {
+unsafe fn load(
+    prefix: &str,
+    path: &str,
+    tests: &mut Vec<TestData>,
+    is_bench: bool,
+    is_validation: bool,
+) -> Result<()> {
     println!("loading {path}");
 
     let lib = ManuallyDrop::new(Library::new(path)?);
     let load_tests: Symbol<FnLoadTests> = lib.get(b"load_tests\0")?;
 
     let raw_tests = load_tests();
-    wrap_raw_tests(prefix, raw_tests, tests);
+    wrap_raw_tests(prefix, raw_tests, tests, is_bench, is_validation);
 
     Ok(())
 }
@@ -90,6 +110,7 @@ fn bench<'x>(
     test: &'x TestData,
     results: &mut IndexMap<&str, Vec<TestResult<'x>>>,
     allocator_kind: AllocatorKind,
+    percent: u32,
 ) {
     println!("testing {}..", test.name);
 
@@ -99,7 +120,11 @@ fn bench<'x>(
 
         let alloc_ptr: *const dyn Allocator = &alloc;
         let alloc_ptr = &alloc_ptr;
-        let object = unsafe { (i.new)(alloc_ptr) };
+        let init = RawScenarioInit {
+            alloc: alloc_ptr,
+            percent,
+        };
+        let object = unsafe { (i.new)(init) };
         alloc.reset_time();
         let time = Instant::now();
         unsafe { (i.run)(object) };
@@ -121,8 +146,16 @@ fn bench<'x>(
 
 #[derive(Parser)]
 struct Args {
+    // Allocators: default, system, arena, sn
     #[arg(short, long, default_value = "default")]
     allocator: String,
+    /// Percent of number of iterations of tests
+    #[arg(short, long, default_value_t = 100)]
+    percent: u32,
+
+    /// Enable bench tests
+    #[arg(short, long, default_value = "bench")]
+    kinds: String,
 }
 
 const DL_NAMES: (&str, &str) = if cfg!(target_os = "windows") {
@@ -166,6 +199,21 @@ impl AllocatorKind {
     }
 }
 
+fn parse_scenarios(s: String) -> (bool, bool) {
+    let mut is_bench = false;
+    let mut is_validation = false;
+
+    for i in s.split(',') {
+        match i {
+            "bench" => is_bench = true,
+            "validation" => is_validation = true,
+            _ => panic!("unknown kind `{i}`"),
+        }
+    }
+
+    (is_bench, is_validation)
+}
+
 fn create_table() -> AsciiTable {
     let mut ascii_table = AsciiTable::default();
     ascii_table.set_max_width(200);
@@ -198,22 +246,32 @@ fn create_table() -> AsciiTable {
     ascii_table
 }
 
-fn main() -> Result<()> {
+fn main_impl() -> Result<()> {
     let args = Args::parse();
     let allocator_kind = AllocatorKind::parse(&args.allocator);
-    println!("allocator: {}", allocator_kind.name());
+    if !(1..=100).contains(&args.percent) {
+        panic!("percent expected to between 1..=100");
+    }
+    let (is_bench, is_validation) = parse_scenarios(args.kinds);
+    println!(
+        "allocator: {}\npercent: {}\nbench: {}\nvalidation: {}",
+        allocator_kind.name(),
+        args.percent,
+        is_bench,
+        is_validation
+    );
 
     let mut tests = Vec::with_capacity(16);
     unsafe {
         let (rust_path, _cpp_path) = DL_NAMES;
-        load("rust", rust_path, &mut tests)?;
+        load("rust", rust_path, &mut tests, is_bench, is_validation)?;
         // load("cpp", cpp_path, &mut tests)?;
         println!();
     };
 
     let mut results = IndexMap::new();
     for i in tests.iter() {
-        bench(i, &mut results, allocator_kind);
+        bench(i, &mut results, allocator_kind, args.percent);
     }
     println!();
 
@@ -244,4 +302,11 @@ fn main() -> Result<()> {
     create_table().print(output.iter());
 
     Ok(())
+}
+
+fn main() -> Result<()> {
+    let start = Instant::now();
+    let result = main_impl();
+    println!("total time: {:?}", start.elapsed());
+    result
 }

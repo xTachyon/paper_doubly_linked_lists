@@ -3,18 +3,23 @@
 mod scenarios;
 mod solutions;
 
-use std::alloc::Allocator;
-
 use scenarios::Scenario;
-use tests_api::{Handle, RawImpl, RawLoadResult, RawScenario};
+use tests_api::{Handle, RawImpl, RawLoadResult, RawScenario, RawScenarioInit, RawScenarioKind};
 
-const fn s<'x, S: Scenario<'x>>(name: &'static str) -> RawScenario {
+use crate::scenarios::ScenarioInit;
+
+const fn sc<'x, S: Scenario<'x>>(
+    name: &'static str,
+    kind: RawScenarioKind,
+) -> RawScenario {
     // TODO: + 'static?
-    unsafe extern "C" fn new<'x, S: Scenario<'x>>(
-        alloc: *const *const (dyn Allocator + 'static),
-    ) -> Handle {
-        let alloc = &**alloc;
-        let s = Box::new(S::new(alloc));
+    unsafe extern "C" fn new<'x, S: Scenario<'x>>(init: RawScenarioInit) -> Handle {
+        let alloc = &**init.alloc;
+        let init = ScenarioInit {
+            alloc,
+            percent: init.percent,
+        };
+        let s = Box::new(S::new(init));
         let ptr = Box::into_raw(s);
 
         ptr as Handle
@@ -30,7 +35,15 @@ const fn s<'x, S: Scenario<'x>>(name: &'static str) -> RawScenario {
         name_size: name.len(),
         new: new::<S>,
         run: run::<S>,
+        kind
     }
+}
+
+const fn sb<'x, S: Scenario<'x>>(name: &'static str) -> RawScenario {
+    sc::<S>(name, RawScenarioKind::Bench)
+}
+const fn sv<'x, S: Scenario<'x>>(name: &'static str) -> RawScenario {
+    sc::<S>(name, RawScenarioKind::Validation)
 }
 
 macro_rules! list_impl {
@@ -38,14 +51,14 @@ macro_rules! list_impl {
         use scenarios::*;
 
         const SCENARIOS: &[RawScenario] = &[
-            s::<First<solutions::$name::Implementation<u64>>>("first"),
-            s::<Last<solutions::$name::Implementation<u64>>>("last"),
-            s::<Last<solutions::$name::Implementation<u64>>>("order"),
-            s::<SearchMiddle<solutions::$name::Implementation<u64>>>("search_middle"),
-            s::<SumScenario<solutions::$name::Implementation<u64>>>("sum"),
-            s::<PushDeleteOneScenario<solutions::$name::Implementation<u64>>>("push_delete_one"),
-            s::<PushScenario<solutions::$name::Implementation<u64>>>("push"),
-            s::<Fragmentation<solutions::$name::Implementation<u64>>>("fragmentation"),
+            sv::<First<solutions::$name::Implementation<u64>>>("first"),
+            sv::<Last<solutions::$name::Implementation<u64>>>("last"),
+            sv::<Last<solutions::$name::Implementation<u64>>>("order"),
+            sb::<SearchMiddle<solutions::$name::Implementation<u64>>>("search_middle"),
+            sb::<SumScenario<solutions::$name::Implementation<u64>>>("sum"),
+            sb::<PushDeleteOneScenario<solutions::$name::Implementation<u64>>>("push_delete_one"),
+            sb::<PushScenario<solutions::$name::Implementation<u64>>>("push"),
+            sb::<Fragmentation<solutions::$name::Implementation<u64>>>("fragmentation"),
         ];
 
         const NAME: &str = stringify!($name);

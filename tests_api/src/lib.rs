@@ -8,8 +8,20 @@ use std::{alloc::Allocator, ffi::c_void};
 
 pub type Handle = *mut c_void;
 
-pub type FnScenarioNew = unsafe extern "C" fn(alloc: *const *const dyn Allocator) -> Handle;
+#[repr(C)]
+pub struct RawScenarioInit {
+    pub alloc: *const *const dyn Allocator,
+    pub percent: u32,
+}
+
+pub type FnScenarioNew = unsafe extern "C" fn(init: RawScenarioInit) -> Handle;
 pub type FnScenarioRun = unsafe extern "C" fn(handle: Handle);
+
+#[repr(C)]
+pub enum RawScenarioKind {
+    Bench,
+    Validation,
+}
 
 #[repr(C)]
 pub struct RawScenario {
@@ -18,6 +30,8 @@ pub struct RawScenario {
 
     pub new: FnScenarioNew,
     pub run: FnScenarioRun,
+
+    pub kind: RawScenarioKind,
 }
 
 #[repr(C)]

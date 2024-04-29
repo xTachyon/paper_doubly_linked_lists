@@ -3,10 +3,23 @@ use tests_api::TheAlloc;
 
 use crate::solutions::double_linked_list::DoubleLinkedList;
 
+pub struct ScenarioInit<'x> {
+    pub alloc: &'x TheAlloc,
+    pub percent: u32,
+}
+impl<'x> ScenarioInit<'x> {
+    fn percent_usize(&self, x: usize) -> usize {
+        x * self.percent as usize / 100
+    }
+    fn percent_u64(&self, x: u64) -> u64 {
+        x * self.percent as u64 / 100
+    }
+}
+
 pub trait Scenario<'x> {
     type Impl;
 
-    fn new(alloc: &'x TheAlloc) -> Self;
+    fn new(init: ScenarioInit<'x>) -> Self;
     fn run(self);
 }
 
@@ -16,16 +29,18 @@ const ITERATIONS: u64 = 1_000_000;
 
 pub struct SumScenario<L> {
     list: L,
+    iterations: usize,
 }
 impl<'x, L: DoubleLinkedList<'x, u64>> Scenario<'x> for SumScenario<L> {
     type Impl = L;
 
-    fn new(alloc: &'x TheAlloc) -> Self {
-        let mut list = L::new(alloc, 10_000_000);
-        for i in 1..=10_000_000 {
-            list.push_back(i);
+    fn new(init: ScenarioInit<'x>) -> Self {
+        let iterations = init.percent_usize(10_000_000);
+        let mut list = L::new(init.alloc, iterations);
+        for i in 1..=iterations {
+            list.push_back(i as u64);
         }
-        Self { list }
+        Self { list, iterations }
     }
 
     fn run(self) {
@@ -39,7 +54,7 @@ impl<'x, L: DoubleLinkedList<'x, u64>> Scenario<'x> for SumScenario<L> {
             first = list.next(element);
         }
 
-        let iterations = 10_000_000;
+        let iterations = self.iterations as u64;
         assert_eq!(sum, iterations * (iterations + 1) / 2);
     }
 }
@@ -47,22 +62,23 @@ impl<'x, L: DoubleLinkedList<'x, u64>> Scenario<'x> for SumScenario<L> {
 // ----------------------------------------------------------------------------
 
 pub struct PushDeleteOneScenario<'x, L> {
-    alloc: &'x TheAlloc,
+    init: ScenarioInit<'x>,
     _p: PhantomData<L>,
 }
 impl<'x, L: DoubleLinkedList<'x, u64>> Scenario<'x> for PushDeleteOneScenario<'x, L> {
     type Impl = L;
 
-    fn new(alloc: &'x TheAlloc) -> Self {
+    fn new(init: ScenarioInit<'x>) -> Self {
         Self {
-            alloc,
+            init,
             _p: PhantomData,
         }
     }
 
     fn run(self) {
-        let mut list = L::new(self.alloc, ITERATIONS as usize);
-        for i in 1..=ITERATIONS {
+        let mut list = L::new(self.init.alloc, 1);
+        let iterations = self.init.percent_u64(ITERATIONS);
+        for i in 1..=iterations {
             let node = list.push_back(i);
             unsafe { list.delete(node) };
         }
@@ -74,19 +90,22 @@ impl<'x, L: DoubleLinkedList<'x, u64>> Scenario<'x> for PushDeleteOneScenario<'x
 // ----------------------------------------------------------------------------
 
 pub struct PushScenario<'x, L> {
-    alloc: &'x TheAlloc,
+    init: ScenarioInit<'x>,
     _p: PhantomData<L>,
 }
 impl<'x, L: DoubleLinkedList<'x, u64>> Scenario<'x> for PushScenario<'x, L> {
     type Impl = L;
 
-    fn new(alloc: &'x TheAlloc) -> Self {
-        Self { alloc, _p: PhantomData }
+    fn new(init: ScenarioInit<'x>) -> Self {
+        Self {
+            init,
+            _p: PhantomData,
+        }
     }
 
     fn run(self) {
-        let iterations = 10_000_000;
-        let mut list = L::new(self.alloc, 10_000_000);
+        let iterations = self.init.percent_u64(10_000_000);
+        let mut list = L::new(self.init.alloc, iterations as usize);
         for i in 1..=iterations {
             list.push_back(i);
         }
@@ -98,20 +117,24 @@ impl<'x, L: DoubleLinkedList<'x, u64>> Scenario<'x> for PushScenario<'x, L> {
 // ----------------------------------------------------------------------------
 
 pub struct Fragmentation<'x, L> {
-    alloc: &'x TheAlloc,
+    init: ScenarioInit<'x>,
     _p: PhantomData<L>,
 }
 impl<'x, L: DoubleLinkedList<'x, u64>> Scenario<'x> for Fragmentation<'x, L> {
     type Impl = L;
 
-    fn new(alloc: &'x TheAlloc) -> Self {
-        Self { alloc, _p: PhantomData }
+    fn new(init: ScenarioInit<'x>) -> Self {
+        Self {
+            init,
+            _p: PhantomData,
+        }
     }
 
     fn run(self) {
-        let mut list = L::new(self.alloc, 1000);
-        let mut to_delete = Vec::with_capacity(1000);
-        for _ in 0..=1_000 {
+        let mut list = L::new(self.init.alloc, 1000);
+        let iterations = self.init.percent_u64(1_000);
+        let mut to_delete = Vec::with_capacity(iterations as usize);
+        for _ in 0..=iterations {
             to_delete.clear();
 
             for i in 0..10_000 {
@@ -137,18 +160,21 @@ impl<'x, L: DoubleLinkedList<'x, u64>> Scenario<'x> for Fragmentation<'x, L> {
 // ----------------------------------------------------------------------------
 
 pub struct First<'x, L> {
-    alloc: &'x TheAlloc,
+    init: ScenarioInit<'x>,
     _p: PhantomData<L>,
 }
 impl<'x, L: DoubleLinkedList<'x, u64>> Scenario<'x> for First<'x, L> {
     type Impl = L;
 
-    fn new(alloc: &'x TheAlloc) -> Self {
-        Self { alloc, _p: PhantomData }
+    fn new(init: ScenarioInit<'x>) -> Self {
+        Self {
+            init,
+            _p: PhantomData,
+        }
     }
 
     fn run(self) {
-        let mut list = L::new(self.alloc, 2);
+        let mut list = L::new(self.init.alloc, 2);
 
         let node = list.push_front(0xDA);
         list.push_back(5);
@@ -160,18 +186,21 @@ impl<'x, L: DoubleLinkedList<'x, u64>> Scenario<'x> for First<'x, L> {
 // ----------------------------------------------------------------------------
 
 pub struct Last<'x, L> {
-    alloc: &'x TheAlloc,
+    init: ScenarioInit<'x>,
     _p: PhantomData<L>,
 }
 impl<'x, L: DoubleLinkedList<'x, u64>> Scenario<'x> for Last<'x, L> {
     type Impl = L;
 
-    fn new(alloc: &'x TheAlloc) -> Self {
-        Self { alloc, _p: PhantomData }
+    fn new(init: ScenarioInit<'x>) -> Self {
+        Self {
+            init,
+            _p: PhantomData,
+        }
     }
 
     fn run(self) {
-        let mut list = L::new(self.alloc, 2);
+        let mut list = L::new(self.init.alloc, 2);
 
         list.push_front(5);
         let node = list.push_back(0xDA);
@@ -183,18 +212,21 @@ impl<'x, L: DoubleLinkedList<'x, u64>> Scenario<'x> for Last<'x, L> {
 // ----------------------------------------------------------------------------
 
 pub struct Order<'x, L> {
-    alloc: &'x TheAlloc,
+    init: ScenarioInit<'x>,
     _p: PhantomData<L>,
 }
 impl<'x, L: DoubleLinkedList<'x, u64>> Scenario<'x> for Order<'x, L> {
     type Impl = L;
 
-    fn new(alloc: &'x TheAlloc) -> Self {
-        Self { alloc, _p: PhantomData }
+    fn new(init: ScenarioInit<'x>) -> Self {
+        Self {
+            init,
+            _p: PhantomData,
+        }
     }
 
     fn run(self) {
-        let mut list = L::new(self.alloc, 2);
+        let mut list = L::new(self.init.alloc, 2);
 
         let n3 = list.push_front(3);
         let n2 = list.insert_before(n3, 2);
@@ -222,23 +254,32 @@ impl<'x, L: DoubleLinkedList<'x, u64>> Scenario<'x> for Order<'x, L> {
 
 pub struct SearchMiddle<L> {
     list: L,
+    iterations: u64,
+    batch: u64,
 }
 impl<'x, L: DoubleLinkedList<'x, u64>> Scenario<'x> for SearchMiddle<L> {
     type Impl = L;
 
-    fn new(alloc: &'x TheAlloc) -> Self {
-        let mut list = L::new(alloc, 10_000_000);
+    fn new(init: ScenarioInit<'x>) -> Self {
+        let iterations = init.percent_u64(10_000_000);
+        let batch = init.percent_u64(100_000);
+
+        let mut list = L::new(init.alloc, iterations as usize);
         for i in 1..=10_000_000 {
             list.push_back(i);
         }
-        Self { list }
+        Self {
+            list,
+            iterations,
+            batch,
+        }
     }
 
     fn run(self) {
         let list = self.list;
 
-        for i in 1..10_000_000 / 100000 {
-            let to_find = i * 100000;
+        for i in 1..self.iterations / self.batch {
+            let to_find = i * self.batch;
             let f = |x: &u64| *x == to_find;
             let node = list.search(f).unwrap();
 
@@ -248,3 +289,4 @@ impl<'x, L: DoubleLinkedList<'x, u64>> Scenario<'x> for SearchMiddle<L> {
         }
     }
 }
+
