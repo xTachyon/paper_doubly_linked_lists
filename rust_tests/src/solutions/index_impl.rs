@@ -156,16 +156,25 @@ impl<'x, T> DoubleLinkedList<'x, T> for Implementation<'x, T> {
 
 impl<'x, T> Implementation<'x, T> {
     fn allocate(&mut self, value: T) -> u32 {
+        let allocated = self.data.len();
         let idx = self
             .free_list
             .pop()
             .map(|f| f as usize)
-            .unwrap_or(self.data.len());
-        self.data.push(Some(Element {
-            next: u32::MAX,
-            prec: u32::MAX,
-            value,
-        }));
+            .unwrap_or(allocated);
+        if idx < allocated {
+            self.data[idx] = Some(Element {
+                next: u32::MAX,
+                prec: u32::MAX,
+                value,
+            });
+        } else {
+            self.data.push(Some(Element {
+                next: u32::MAX,
+                prec: u32::MAX,
+                value,
+            }));
+        }
         idx as u32
     }
     fn link(&mut self, n1: u32, n2: u32) {
