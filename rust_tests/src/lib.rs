@@ -8,10 +8,7 @@ use tests_api::{Handle, RawImpl, RawLoadResult, RawScenario, RawScenarioInit, Ra
 
 use crate::scenarios::ScenarioInit;
 
-const fn sc<'x, S: Scenario<'x>>(
-    name: &'static str,
-    kind: RawScenarioKind,
-) -> RawScenario {
+const fn sc<'x, S: Scenario<'x>>(name: &'static str, kind: RawScenarioKind) -> RawScenario {
     // TODO: + 'static?
     unsafe extern "C" fn new<'x, S: Scenario<'x>>(init: RawScenarioInit) -> Handle {
         let alloc = &**init.alloc;
@@ -35,7 +32,7 @@ const fn sc<'x, S: Scenario<'x>>(
         name_size: name.len(),
         new: new::<S>,
         run: run::<S>,
-        kind
+        kind,
     }
 }
 

@@ -1,5 +1,5 @@
-use tests_api::TheAlloc;
 use super::DoubleLinkedList;
+use tests_api::TheAlloc;
 
 struct Element<T> {
     next: u32,

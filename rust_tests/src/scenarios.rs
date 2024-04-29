@@ -289,4 +289,3 @@ impl<'x, L: DoubleLinkedList<'x, u64>> Scenario<'x> for SearchMiddle<L> {
         }
     }
 }
-

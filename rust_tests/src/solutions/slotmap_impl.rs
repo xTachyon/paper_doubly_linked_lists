@@ -1,7 +1,7 @@
 use super::double_linked_list::DoubleLinkedList;
 use slotmap::SlotMap;
-use tests_api::TheAlloc;
 use std::fmt::Debug;
+use tests_api::TheAlloc;
 
 type DefaultKey = slotmap::DefaultKey;
 
