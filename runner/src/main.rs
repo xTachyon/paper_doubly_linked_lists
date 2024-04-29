@@ -13,7 +13,8 @@ use std::{
     time::{Duration, Instant},
 };
 use tests_api::{
-    stats_alloc::StatsAllocator, FnLoadTests, FnScenarioNew, FnScenarioRun, RawLoadResult,
+    arena_alloc::ArenaAlloc, snalloc::SnAlloc, stats_alloc::StatsAllocator, FnLoadTests,
+    FnScenarioNew, FnScenarioRun, RawLoadResult,
 };
 
 struct ScenarioData {
@@ -84,11 +85,16 @@ struct TestResult<'x> {
     extra: TestResultExtra,
 }
 
-fn bench<'x>(test: &'x TestData, results: &mut HashMap<&str, Vec<TestResult<'x>>>) {
+fn bench<'x>(
+    test: &'x TestData,
+    results: &mut HashMap<&str, Vec<TestResult<'x>>>,
+    allocator_kind: AllocatorKind,
+) {
     println!("testing {}..", test.name);
 
     for i in test.scenarios.iter() {
-        let alloc = StatsAllocator::new(Box::leak(Box::new(Global)) as &_);
+        let alloc = StatsAllocator::new(Box::leak(allocator_kind.create()) as &_);
+        // TODO: leak
 
         let alloc_ptr: *const dyn Allocator = &alloc;
         let alloc_ptr = &alloc_ptr;
@@ -111,12 +117,10 @@ fn bench<'x>(test: &'x TestData, results: &mut HashMap<&str, Vec<TestResult<'x>>
     }
 }
 
-const DEFAULT_ITERATIONS: u64 = 10_000_000;
-
 #[derive(Parser)]
 struct Args {
-    #[arg(short, long, default_value_t=DEFAULT_ITERATIONS)]
-    iterations: u64,
+    #[arg(short, long, default_value = "default")]
+    allocator: String,
 }
 
 const DL_NAMES: (&str, &str) = if cfg!(target_os = "windows") {
@@ -129,9 +133,42 @@ const DL_NAMES: (&str, &str) = if cfg!(target_os = "windows") {
     panic!("what are you running on? 🤔");
 };
 
+#[derive(Clone, Copy)]
+enum AllocatorKind {
+    System,
+    Arena,
+    Sn,
+}
+impl AllocatorKind {
+    fn create(self) -> Box<dyn Allocator> {
+        match self {
+            AllocatorKind::System => Box::new(Global),
+            AllocatorKind::Arena => Box::new(ArenaAlloc::new(2 * 1024 * 1024 * 1024)),
+            AllocatorKind::Sn => Box::new(SnAlloc::new()),
+        }
+    }
+    fn name(self) -> &'static str {
+        match self {
+            AllocatorKind::System => "system",
+            AllocatorKind::Arena => "arena",
+            AllocatorKind::Sn => "sn",
+        }
+    }
+}
+
+fn parse_allocator_kind(name: &str) -> AllocatorKind {
+    match name {
+        "default" | "system" => AllocatorKind::System,
+        "arena" => AllocatorKind::Arena,
+        "sn" => AllocatorKind::Sn,
+        _ => panic!("unknown allocator: {name}"),
+    }
+}
+
 fn main() -> Result<()> {
-    // let args = Args::parse();
-    // println!("iterations={}", args.iterations);
+    let args = Args::parse();
+    let allocator_kind = parse_allocator_kind(&args.allocator);
+    println!("allocator: {}", allocator_kind.name());
 
     let mut tests = Vec::with_capacity(16);
     unsafe {
@@ -143,7 +180,7 @@ fn main() -> Result<()> {
 
     let mut results = HashMap::new();
     for i in tests.iter() {
-        bench(i, &mut results);
+        bench(i, &mut results, allocator_kind);
     }
     println!();
 

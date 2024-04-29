@@ -1,6 +1,6 @@
 #![feature(allocator_api)]
 
-mod alloc;
+pub mod arena_alloc;
 pub mod snalloc;
 pub mod stats_alloc;
 

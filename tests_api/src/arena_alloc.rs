@@ -18,7 +18,7 @@ pub struct Stats {
 #[derive(Clone, Copy)]
 struct Page([u8; PAGE_SIZE]);
 
-pub struct TheAlloc {
+pub struct ArenaAlloc {
     buffer: Vec<Page>,
     offset: Cell<usize>,
     capacity: usize,
@@ -27,13 +27,13 @@ pub struct TheAlloc {
     max_allocated: Cell<usize>,
 }
 
-impl TheAlloc {
-    pub fn new(cap: usize) -> TheAlloc {
+impl ArenaAlloc {
+    pub fn new(cap: usize) -> ArenaAlloc {
         if cap % PAGE_SIZE != 0 {
             panic!("capacity is not aligned to 4096");
         }
 
-        TheAlloc {
+        ArenaAlloc {
             buffer: vec![Page([INIT_BYTE; PAGE_SIZE]); cap / PAGE_SIZE],
             offset: Cell::new(0),
             capacity: cap,
@@ -52,7 +52,7 @@ impl TheAlloc {
         let slice = unsafe { slice::from_raw_parts_mut(buffer, self.capacity) };
         slice.fill(INIT_BYTE);
 
-        *self = TheAlloc {
+        *self = ArenaAlloc {
             buffer: std::mem::take(&mut self.buffer),
             offset: Cell::new(0),
             capacity: self.capacity,
@@ -69,7 +69,7 @@ impl TheAlloc {
         }
     }
 }
-unsafe impl Allocator for &TheAlloc {
+unsafe impl Allocator for ArenaAlloc {
     fn allocate(&self, layout: Layout) -> Result<NonNull<[u8]>, AllocError> {
         // TODO: use handle_alloc_error instead of panic
 

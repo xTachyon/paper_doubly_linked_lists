@@ -40,7 +40,7 @@ impl Drop for SnAlloc {
     }
 }
 
-unsafe impl Allocator for &SnAlloc {
+unsafe impl Allocator for SnAlloc {
     fn allocate(&self, layout: Layout) -> Result<NonNull<[u8]>, AllocError> {
         self.alloc(layout, false)
     }
