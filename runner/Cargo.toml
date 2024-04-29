@@ -11,5 +11,6 @@ anyhow.workspace = true
 libloading.workspace = true
 ascii_table.workspace = true
 clap.workspace = true
-stats_alloc.workspace = true
+# stats_alloc.workspace = true
 humansize.workspace = true
+indexmap.workspace = true
