@@ -166,6 +166,38 @@ impl AllocatorKind {
     }
 }
 
+fn create_table() -> AsciiTable {
+    let mut ascii_table = AsciiTable::default();
+    ascii_table.set_max_width(200);
+
+    ascii_table
+        .column(0)
+        .set_header("scenario")
+        .set_align(Align::Center);
+    ascii_table
+        .column(1)
+        .set_header("name")
+        .set_align(Align::Center);
+    ascii_table
+        .column(2)
+        .set_header("run")
+        .set_align(Align::Right);
+    ascii_table
+        .column(3)
+        .set_header("slower(run)")
+        .set_align(Align::Right);
+    ascii_table
+        .column(4)
+        .set_header("no. allocs")
+        .set_align(Align::Right);
+    ascii_table
+        .column(5)
+        .set_header("max memory")
+        .set_align(Align::Right);
+
+    ascii_table
+}
+
 fn main() -> Result<()> {
     let args = Args::parse();
     let allocator_kind = AllocatorKind::parse(&args.allocator);
@@ -188,6 +220,7 @@ fn main() -> Result<()> {
     let mut output: Vec<[&dyn Display; 6]> = Vec::with_capacity(64);
     for tests in results.values_mut() {
         let min_run = tests.iter().map(|x| x.run_time.as_millis()).min().unwrap() as f64;
+        tests.sort_by_key(|x| x.run_time);
         for i in tests {
             i.extra = TestResultExtra {
                 run_time: format!("{:?}", i.run_time),
@@ -204,32 +237,11 @@ fn main() -> Result<()> {
                 &i.extra.max_memory,
             ]);
         }
-        output.push([&"---", &"---", &"---", &"---", &"---", &"---"]);
+        let dashes = &"------";
+        output.push([dashes, dashes, dashes, dashes, dashes, dashes]);
     }
-    let mut ascii_table = AsciiTable::default();
-    ascii_table.set_max_width(200);
-    ascii_table
-        .column(0)
-        .set_header("scenario")
-        .set_align(Align::Center);
-    ascii_table
-        .column(1)
-        .set_header("run")
-        .set_align(Align::Right);
-    ascii_table
-        .column(2)
-        .set_header("slower(run)")
-        .set_align(Align::Right);
-    ascii_table
-        .column(3)
-        .set_header("no. allocs")
-        .set_align(Align::Right);
-    ascii_table
-        .column(4)
-        .set_header("max memory")
-        .set_align(Align::Right);
 
-    ascii_table.print(output.iter());
+    create_table().print(output.iter());
 
     Ok(())
 }
