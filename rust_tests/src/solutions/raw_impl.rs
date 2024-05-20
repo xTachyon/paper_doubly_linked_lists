@@ -17,17 +17,20 @@ pub struct Implementation<'x, T> {
 }
 
 impl<'x, T> Implementation<'x, T> {
-    fn allocate_node(value: T) -> *mut Node<T> {
-        Box::into_raw(Box::new(Node {
-            value,
-            prev: ptr::null_mut(),
-            next: ptr::null_mut(),
-        }))
+    fn allocate_node(&mut self, value: T) -> *mut Node<T> {
+        Box::into_raw(Box::new_in(
+            Node {
+                value,
+                prev: ptr::null_mut(),
+                next: ptr::null_mut(),
+            },
+            self.alloc,
+        ))
     }
 
-    fn deallocate_node(node: *mut Node<T>) {
+    fn deallocate_node(&mut self, node: *mut Node<T>) {
         unsafe {
-            Box::from_raw(node);
+            Box::from_raw_in(node, self.alloc);
         }
     }
 }
@@ -44,7 +47,7 @@ impl<'x, T: Copy + PartialEq + Debug> DoubleLinkedList<'x, T> for Implementation
     }
 
     fn insert_after(&mut self, node: Self::NodeRef, value: T) -> Self::NodeRef {
-        let new_node = Self::allocate_node(value);
+        let new_node = self.allocate_node(value);
         unsafe {
             (*new_node).prev = node;
             (*new_node).next = (*node).next;
@@ -61,7 +64,7 @@ impl<'x, T: Copy + PartialEq + Debug> DoubleLinkedList<'x, T> for Implementation
     }
 
     fn insert_before(&mut self, node: Self::NodeRef, value: T) -> Self::NodeRef {
-        let new_node = Self::allocate_node(value);
+        let new_node = self.allocate_node(value);
         unsafe {
             (*new_node).next = node;
             (*new_node).prev = (*node).prev;
@@ -78,7 +81,7 @@ impl<'x, T: Copy + PartialEq + Debug> DoubleLinkedList<'x, T> for Implementation
     }
 
     fn push_back(&mut self, value: T) -> Self::NodeRef {
-        let new_node = Self::allocate_node(value);
+        let new_node = self.allocate_node(value);
         unsafe {
             (*new_node).prev = self.tail;
 
@@ -94,7 +97,7 @@ impl<'x, T: Copy + PartialEq + Debug> DoubleLinkedList<'x, T> for Implementation
     }
 
     fn push_front(&mut self, value: T) -> Self::NodeRef {
-        let new_node = Self::allocate_node(value);
+        let new_node = self.allocate_node(value);
         unsafe {
             (*new_node).next = self.head;
 
@@ -123,7 +126,7 @@ impl<'x, T: Copy + PartialEq + Debug> DoubleLinkedList<'x, T> for Implementation
                 self.tail = (*node).prev;
             }
 
-            Self::deallocate_node(node);
+            self.deallocate_node(node);
         }
     }
 
