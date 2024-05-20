@@ -2,7 +2,7 @@ use tests_api::TheAlloc;
 
 #[allow(dead_code)] // TODO
 pub trait DoubleLinkedList<'x, T> {
-    type NodeRef: Copy + PartialEq + std::fmt::Debug;
+    type NodeRef: Clone + PartialEq + std::fmt::Debug;
 
     /// Creates a list.
     fn new(alloc: &'x TheAlloc, capacity: usize) -> Self;
@@ -19,7 +19,7 @@ pub trait DoubleLinkedList<'x, T> {
     fn search<F: Fn(&T) -> bool>(&self, f: F) -> Option<Self::NodeRef> {
         let mut it = self.first();
         while let Some(x) = it {
-            if f(self.value(x)?) {
+            if f(self.value(x.clone())?) {
                 return Some(x);
             }
             it = self.next(x);

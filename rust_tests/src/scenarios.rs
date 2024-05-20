@@ -49,7 +49,7 @@ impl<'x, L: DoubleLinkedList<'x, u64>> Scenario<'x> for SumScenario<L> {
 
         let mut first = list.first();
         while let Some(element) = first {
-            let value = list.value(element).unwrap();
+            let value = list.value(element.clone()).unwrap();
             sum += value;
             first = list.next(element);
         }
@@ -132,10 +132,9 @@ impl<'x, L: DoubleLinkedList<'x, u64>> Scenario<'x> for Fragmentation<'x, L> {
 
     fn run(self) {
         let mut list = L::new(self.init.alloc, 1000);
-        let iterations = self.init.percent_u64(1_000);
-        let mut to_delete = Vec::with_capacity(iterations as usize);
+        let iterations = self.init.percent_u64(1_000);        
         for _ in 0..=iterations {
-            to_delete.clear();
+            let mut to_delete = Vec::with_capacity(iterations as usize);
 
             for i in 0..10_000 {
                 list.push_back(i);
@@ -150,8 +149,8 @@ impl<'x, L: DoubleLinkedList<'x, u64>> Scenario<'x> for Fragmentation<'x, L> {
                 list.push_back(i);
             }
 
-            for i in to_delete.iter() {
-                unsafe { list.delete(*i) };
+            for i in to_delete {
+                unsafe { list.delete(i) };
             }
         }
     }
@@ -229,18 +228,18 @@ impl<'x, L: DoubleLinkedList<'x, u64>> Scenario<'x> for Order<'x, L> {
         let mut list = L::new(self.init.alloc, 2);
 
         let n3 = list.push_front(3);
-        let n2 = list.insert_before(n3, 2);
+        let n2 = list.insert_before(n3.clone(), 2);
         let n1 = list.push_front(1);
         let n5 = list.push_back(5);
-        let n4 = list.insert_before(n5, 4);
+        let n4 = list.insert_before(n5.clone(), 4);
 
         let values = [n1, n2, n3, n4, n5];
         let mut values_index = 0;
 
         let mut first = list.first();
         while let Some(element) = first {
-            let v = *list.value(element).unwrap();
-            let w = *list.value(values[values_index]).unwrap();
+            let v = *list.value(element.clone()).unwrap();
+            let w = *list.value(values[values_index].clone()).unwrap();
             assert_eq!(v, w);
             assert_eq!(v, values_index as u64);
             values_index += 1;
@@ -283,8 +282,8 @@ impl<'x, L: DoubleLinkedList<'x, u64>> Scenario<'x> for SearchMiddle<L> {
             let f = |x: &u64| *x == to_find;
             let node = list.search(f).unwrap();
 
-            assert_eq!(list.value(node), Some(&to_find));
-            assert_eq!(list.value(list.prec(node).unwrap()), Some(&(to_find - 1)));
+            assert_eq!(list.value(node.clone()), Some(&to_find));
+            assert_eq!(list.value(list.prec(node.clone()).unwrap()), Some(&(to_find - 1)));
             assert_eq!(list.value(list.next(node).unwrap()), Some(&(to_find + 1)));
         }
     }
