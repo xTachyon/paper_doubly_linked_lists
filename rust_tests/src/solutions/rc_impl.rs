@@ -11,6 +11,18 @@ pub struct Node<T> {
     next: Option<Rc<RefCell<Node<T>>>>,
 }
 
+impl<T> Drop for Node<T> {
+    fn drop(&mut self) {
+        loop {
+            let Some(next) = self.next.take() else {
+                return;
+            };
+            let next = next.borrow_mut().next.take();
+            self.next = next;
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct NodeRef<T>(Weak<RefCell<Node<T>>>);
 

@@ -269,7 +269,7 @@ impl<'x, L: DoubleLinkedList<'x, u64>> Scenario<'x> for UseAfterDelete<'x, L> {
         let mut list = L::new(self.init.alloc, 2);
 
         let node = list.push_front(0xDA);
-        unsafe { list.delete(node) };
+        unsafe { list.delete(node.clone()) };
         // UB incoming
         black_box(list.value(node));
     }
