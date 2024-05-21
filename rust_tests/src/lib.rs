@@ -48,9 +48,12 @@ macro_rules! list_impl {
         use scenarios::*;
 
         const SCENARIOS: &[RawScenario] = &[
+            // validation
+            // sv::<UseAfterDelete<solutions::$name::Implementation<u64>>>("use_after_delete"),
             sv::<First<solutions::$name::Implementation<u64>>>("first"),
             sv::<Last<solutions::$name::Implementation<u64>>>("last"),
             sv::<Last<solutions::$name::Implementation<u64>>>("order"),
+            // bench
             sb::<SearchMiddle<solutions::$name::Implementation<u64>>>("search_middle"),
             sb::<SumScenario<solutions::$name::Implementation<u64>>>("sum"),
             sb::<PushDeleteOneScenario<solutions::$name::Implementation<u64>>>("push_delete_one"),

@@ -8,6 +8,7 @@ use indexmap::IndexMap;
 use libloading::{Library, Symbol};
 use std::{
     alloc::{Allocator, Global},
+    array,
     fmt::Display,
     mem::ManuallyDrop,
     time::{Duration, Instant},
@@ -93,6 +94,7 @@ unsafe fn load(
 #[derive(Default)]
 struct TestResultExtra {
     run_time: String,
+    alloc_time: String,
     slower_run: String,
     max_memory: String,
 }
@@ -101,6 +103,7 @@ struct TestResult<'x> {
     scenario: &'x str,
     impl_name: &'x str,
     run_time: Duration,
+    alloc_time: Duration,
     no_allocs: usize,
     max_memory: usize,
     extra: TestResultExtra,
@@ -129,14 +132,15 @@ fn bench<'x>(
         let time = Instant::now();
         unsafe { (i.run)(object) };
         let elapsed = time.elapsed();
-
+        let alloc_time = alloc.time();
         results
             .entry(i.name)
             .or_insert(Vec::new())
             .push(TestResult {
                 scenario: i.name,
                 impl_name: &test.name,
-                run_time: elapsed - alloc.time(),
+                run_time: elapsed - alloc_time,
+                alloc_time,
                 no_allocs: alloc.no_allocs(),
                 max_memory: alloc.max_allocated(),
                 extra: TestResultExtra::default(),
@@ -168,7 +172,7 @@ const DL_NAMES: (&str, &str) = if cfg!(target_os = "windows") {
     panic!("what are you running on? 🤔");
 };
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq, Eq)]
 enum AllocatorKind {
     System,
     Arena,
@@ -189,9 +193,10 @@ impl AllocatorKind {
             AllocatorKind::Sn => "sn",
         }
     }
-    fn parse(name: &str) -> AllocatorKind {
+    fn parse(name: &str, default: AllocatorKind) -> AllocatorKind {
         match name {
-            "default" | "system" => AllocatorKind::System,
+            "default" => default,
+            "system" => AllocatorKind::System,
             "arena" => AllocatorKind::Arena,
             "sn" => AllocatorKind::Sn,
             _ => panic!("unknown allocator: {name}"),
@@ -218,41 +223,41 @@ fn create_table() -> AsciiTable {
     let mut ascii_table = AsciiTable::default();
     ascii_table.set_max_width(200);
 
-    ascii_table
-        .column(0)
-        .set_header("scenario")
-        .set_align(Align::Center);
-    ascii_table
-        .column(1)
-        .set_header("name")
-        .set_align(Align::Center);
-    ascii_table
-        .column(2)
-        .set_header("run")
-        .set_align(Align::Right);
-    ascii_table
-        .column(3)
-        .set_header("slower(run)")
-        .set_align(Align::Right);
-    ascii_table
-        .column(4)
-        .set_header("no. allocs")
-        .set_align(Align::Right);
-    ascii_table
-        .column(5)
-        .set_header("max memory")
-        .set_align(Align::Right);
+    let columns = [
+        ("scenario", Align::Center),
+        ("name", Align::Center),
+        ("time", Align::Right),
+        ("alloc_time", Align::Right),
+        ("slower(run)", Align::Right),
+        ("no. allocs", Align::Right),
+        ("max memory", Align::Right),
+    ];
+
+    for (index, (name, alignment)) in columns.iter().enumerate() {
+        ascii_table
+            .column(index)
+            .set_header(*name)
+            .set_align(*alignment);
+    }
 
     ascii_table
 }
 
 fn main_impl() -> Result<()> {
     let args = Args::parse();
-    let allocator_kind = AllocatorKind::parse(&args.allocator);
     if !(1..=100).contains(&args.percent) {
         panic!("percent expected to between 1..=100");
     }
     let (is_bench, is_validation) = parse_scenarios(args.kinds);
+    let default_allocator = if is_validation {
+        AllocatorKind::Arena
+    } else {
+        AllocatorKind::System
+    };
+    let allocator_kind = AllocatorKind::parse(&args.allocator, default_allocator);
+    if is_validation && allocator_kind != AllocatorKind::Arena {
+        panic!("validation must be run with arena allocator");
+    }
     println!(
         "allocator: {}\npercent: {}\nbench: {}\nvalidation: {}",
         allocator_kind.name(),
@@ -275,13 +280,14 @@ fn main_impl() -> Result<()> {
     }
     println!();
 
-    let mut output: Vec<[&dyn Display; 6]> = Vec::with_capacity(64);
+    let mut output: Vec<[&dyn Display; 7]> = Vec::with_capacity(64);
     for tests in results.values_mut() {
         let min_run = tests.iter().map(|x| x.run_time.as_millis()).min().unwrap() as f64;
         tests.sort_by_key(|x| x.run_time);
         for i in tests {
             i.extra = TestResultExtra {
                 run_time: format!("{:?}", i.run_time),
+                alloc_time: format!("{:?}", i.alloc_time),
                 slower_run: format!("{:.02}x", i.run_time.as_millis() as f64 / min_run),
                 max_memory: format_size(i.max_memory, BINARY),
             };
@@ -290,13 +296,15 @@ fn main_impl() -> Result<()> {
                 &i.scenario,
                 &i.impl_name,
                 &i.extra.run_time,
+                &i.extra.alloc_time,
                 &i.extra.slower_run,
                 &i.no_allocs,
                 &i.extra.max_memory,
             ]);
         }
         let dashes = &"------";
-        output.push([dashes, dashes, dashes, dashes, dashes, dashes]);
+        let arr = array::from_fn(|_| dashes as &dyn Display);
+        output.push(arr);
     }
 
     create_table().print(output.iter());

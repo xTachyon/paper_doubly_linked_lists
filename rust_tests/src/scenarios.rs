@@ -1,4 +1,4 @@
-use std::marker::PhantomData;
+use std::{hint::black_box, marker::PhantomData};
 use tests_api::TheAlloc;
 
 use crate::solutions::double_linked_list::DoubleLinkedList;
@@ -247,6 +247,32 @@ impl<'x, L: DoubleLinkedList<'x, u64>> Scenario<'x> for Order<'x, L> {
 
             first = list.next(element);
         }
+    }
+}
+
+// ----------------------------------------------------------------------------
+
+pub struct UseAfterDelete<'x, L> {
+    init: ScenarioInit<'x>,
+    _p: PhantomData<L>,
+}
+impl<'x, L: DoubleLinkedList<'x, u64>> Scenario<'x> for UseAfterDelete<'x, L> {
+    type Impl = L;
+
+    fn new(init: ScenarioInit<'x>) -> Self {
+        Self {
+            init,
+            _p: PhantomData,
+        }
+    }
+
+    fn run(self) {
+        let mut list = L::new(self.init.alloc, 2);
+
+        let node = list.push_front(0xDA);
+        unsafe { list.delete(node) };
+        // UB incoming
+        black_box(list.value(node));
     }
 }
 
