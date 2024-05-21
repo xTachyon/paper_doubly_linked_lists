@@ -3,6 +3,7 @@ members = [
     "runner",
     "rust_tests",
     "tests_api",
+    "std_stuff",
     # "cpp_tests_build",
     # "cpp_tests_build",
 ]
@@ -11,6 +12,7 @@ resolver = "2"
 
 [workspace.dependencies]
 tests_api = { path = "tests_api" }
+std_stuff = { path = "std_stuff" }
 # cpp_tests_build = { path = "cpp_tests_build" }
 
 anyhow = "1"

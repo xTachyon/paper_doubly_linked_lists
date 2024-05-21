@@ -8,6 +8,7 @@ crate-type = ["dylib"]
 
 [dependencies]
 tests_api.workspace = true
+std_stuff.workspace = true
 
 slotmap.workspace = true
 hashbrown.workspace = true

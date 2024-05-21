@@ -247,6 +247,7 @@ version = "0.1.0"
 dependencies = [
  "hashbrown",
  "slotmap",
+ "std_stuff",
  "tests_api",
 ]
 
@@ -263,6 +264,10 @@ version = "0.3.5"
 dependencies = [
  "cmake",
 ]
+
+[[package]]
+name = "std_stuff"
+version = "0.1.0"
 
 [[package]]
 name = "strsim"
