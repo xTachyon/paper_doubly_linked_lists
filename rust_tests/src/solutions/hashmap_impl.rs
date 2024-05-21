@@ -1,6 +1,6 @@
 use super::DoubleLinkedList;
-use std::collections::HashMap;
 use std::fmt::Debug;
+use hashbrown::{hash_map::DefaultHashBuilder, HashMap};
 use tests_api::TheAlloc;
 
 #[derive(Debug)]
@@ -12,7 +12,7 @@ struct Node<T> {
 
 #[derive(Debug)]
 pub struct Implementation<T> {
-    nodes: HashMap<usize, Node<T>>,
+    nodes: HashMap<usize, Node<T>, DefaultHashBuilder, &'static TheAlloc>,
     head: Option<usize>,
     tail: Option<usize>,
     key_index: usize,
@@ -37,10 +37,9 @@ impl<T> Implementation<T> {
 impl<'x, T> DoubleLinkedList<'x, T> for Implementation<T> {
     type NodeRef = usize;
 
-    // @Andrei -- add code to use _alloc
-    fn new(_alloc: &'x TheAlloc, capacity: usize) -> Self {
+    fn new(alloc: &'static TheAlloc, capacity: usize) -> Self {
         Implementation {
-            nodes: HashMap::with_capacity(capacity),
+            nodes: HashMap::with_capacity_in(capacity, alloc),
             head: None,
             tail: None,
             key_index: 0,
