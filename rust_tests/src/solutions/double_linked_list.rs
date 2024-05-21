@@ -5,7 +5,7 @@ pub trait DoubleLinkedList<'x, T> {
     type NodeRef: Clone + PartialEq + std::fmt::Debug;
 
     /// Creates a list.
-    fn new(alloc: &'x TheAlloc, capacity: usize) -> Self;
+    fn new(alloc: &'static TheAlloc, capacity: usize) -> Self;
 
     fn insert_after(&mut self, node: Self::NodeRef, value: T) -> Self::NodeRef;
     fn insert_before(&mut self, node: Self::NodeRef, value: T) -> Self::NodeRef;

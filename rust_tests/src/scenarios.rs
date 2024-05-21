@@ -4,8 +4,9 @@ use tests_api::TheAlloc;
 use crate::solutions::double_linked_list::DoubleLinkedList;
 
 pub struct ScenarioInit<'x> {
-    pub alloc: &'x TheAlloc,
+    pub alloc: &'static TheAlloc,
     pub percent: u32,
+    pub _p: PhantomData<&'x ()>
 }
 impl<'x> ScenarioInit<'x> {
     fn percent_usize(&self, x: usize) -> usize {

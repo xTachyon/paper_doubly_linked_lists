@@ -3,6 +3,8 @@
 mod scenarios;
 mod solutions;
 
+use std::marker::PhantomData;
+
 use scenarios::Scenario;
 use tests_api::{Handle, RawImpl, RawLoadResult, RawScenario, RawScenarioInit, RawScenarioKind};
 
@@ -15,6 +17,7 @@ const fn sc<'x, S: Scenario<'x>>(name: &'static str, kind: RawScenarioKind) -> R
         let init = ScenarioInit {
             alloc,
             percent: init.percent,
+            _p: PhantomData
         };
         let s = Box::new(S::new(init));
         let ptr = Box::into_raw(s);
