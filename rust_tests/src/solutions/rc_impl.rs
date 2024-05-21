@@ -8,11 +8,26 @@ use tests_api::TheAlloc;
 pub struct Node<T> {
     value: T,
     prev: Option<NodeRef<T>>,
-    next: Option<Rc<RefCell<Node<T>>>>,
+    next: Option<R<T>>,
 }
 
+impl<T> Drop for Node<T> {
+    fn drop(&mut self) {
+        loop {
+            let Some(next) = self.next.take() else {
+                return;
+            };
+            let next = next.borrow_mut().next.take();
+            self.next = next;
+        }
+    }
+}
+
+type R<T> = Rc<RefCell<Node<T>>, &'static TheAlloc>;
+type W<T> = Weak<RefCell<Node<T>>, &'static TheAlloc>;
+
 #[derive(Debug, Clone)]
-pub struct NodeRef<T>(Weak<RefCell<Node<T>>>);
+pub struct NodeRef<T>(W<T>);
 
 impl<T> PartialEq for NodeRef<T> {
     fn eq(&self, other: &Self) -> bool {
@@ -20,14 +35,14 @@ impl<T> PartialEq for NodeRef<T> {
     }
 }
 
-pub struct Implementation<'x, T> {
-    head: Option<Rc<RefCell<Node<T>>>>,
-    tail: Option<Rc<RefCell<Node<T>>>>,
-    alloc: &'x TheAlloc,
+pub struct Implementation<T> {
+    head: Option<R<T>>,
+    tail: Option<R<T>>,
+    alloc: &'static TheAlloc,
 }
 
-impl<'x, T> Implementation<'x, T> {
-    fn allocate_node(&mut self, value: T) -> Rc<RefCell<Node<T>>> {
+impl<T> Implementation<T> {
+    fn allocate_node(&mut self, value: T) -> R<T> {
         // Rc::new_in(
         //     RefCell::new(Node {
         //         value,
@@ -36,18 +51,21 @@ impl<'x, T> Implementation<'x, T> {
         //     }),
         //     self.alloc,
         // )
-        Rc::new(RefCell::new(Node {
-            value,
-            prev: None,
-            next: None,
-        }))
+        Rc::new_in(
+            RefCell::new(Node {
+                value,
+                prev: None,
+                next: None,
+            }),
+            self.alloc,
+        )
     }
 }
 
-impl<'x, T: Clone + PartialEq + Debug> DoubleLinkedList<'x, T> for Implementation<'x, T> {
+impl<'x, T: Clone + PartialEq + Debug> DoubleLinkedList<'x, T> for Implementation<T> {
     type NodeRef = NodeRef<T>;
 
-    fn new(alloc: &'x TheAlloc, _capacity: usize) -> Self {
+    fn new(alloc: &'static TheAlloc, _capacity: usize) -> Self {
         Implementation {
             head: None,
             tail: None,
@@ -74,7 +92,7 @@ impl<'x, T: Clone + PartialEq + Debug> DoubleLinkedList<'x, T> for Implementatio
 
             NodeRef(Rc::downgrade(&new_node))
         } else {
-            NodeRef(Weak::new())
+            NodeRef(Weak::new_in(self.alloc))
         }
     }
 
@@ -97,7 +115,7 @@ impl<'x, T: Clone + PartialEq + Debug> DoubleLinkedList<'x, T> for Implementatio
 
             NodeRef(Rc::downgrade(&new_node))
         } else {
-            NodeRef(Weak::new())
+            NodeRef(Weak::new_in(self.alloc))
         }
     }
 

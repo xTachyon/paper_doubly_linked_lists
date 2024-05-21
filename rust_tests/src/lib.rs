@@ -3,6 +3,8 @@
 mod scenarios;
 mod solutions;
 
+use std::marker::PhantomData;
+
 use scenarios::Scenario;
 use tests_api::{Handle, RawImpl, RawLoadResult, RawScenario, RawScenarioInit, RawScenarioKind};
 
@@ -15,6 +17,7 @@ const fn sc<'x, S: Scenario<'x>>(name: &'static str, kind: RawScenarioKind) -> R
         let init = ScenarioInit {
             alloc,
             percent: init.percent,
+            _p: PhantomData
         };
         let s = Box::new(S::new(init));
         let ptr = Box::into_raw(s);
@@ -48,9 +51,12 @@ macro_rules! list_impl {
         use scenarios::*;
 
         const SCENARIOS: &[RawScenario] = &[
+            // validation
+            // sv::<UseAfterDelete<solutions::$name::Implementation<u64>>>("use_after_delete"),
             sv::<First<solutions::$name::Implementation<u64>>>("first"),
             sv::<Last<solutions::$name::Implementation<u64>>>("last"),
             sv::<Last<solutions::$name::Implementation<u64>>>("order"),
+            // bench
             sb::<SearchMiddle<solutions::$name::Implementation<u64>>>("search_middle"),
             sb::<SumScenario<solutions::$name::Implementation<u64>>>("sum"),
             sb::<PushDeleteOneScenario<solutions::$name::Implementation<u64>>>("push_delete_one"),
