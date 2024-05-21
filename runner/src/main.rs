@@ -41,12 +41,23 @@ unsafe fn wrap_raw_tests(
     tests: &mut Vec<TestData>,
     is_bench: bool,
     is_validation: bool,
+    specific_impl: Option<String>,
+    specific_scenario: Option<String>,
 ) {
+    let mut specific_impl_found = false;
+    let mut specific_scenario_found = false;
     for i in 0..raw_tests.list_impl_count {
         let current = &*raw_tests.list_impl.add(i);
 
         let name = s(current.name, current.name_size);
         let name = format!("{}_{}", prefix, name);
+
+        if let Some(n) = specific_impl.as_deref() {
+            if n != name {
+                continue;
+            }
+            specific_impl_found = true;
+        }
 
         let mut scenarios = Vec::with_capacity(16);
         for i in 0..current.scenarios_count {
@@ -62,6 +73,13 @@ unsafe fn wrap_raw_tests(
 
             let name = s(current.name, current.name_size);
 
+            if let Some(n) = specific_scenario.as_deref() {
+                if n != name {
+                    continue;
+                }
+                specific_scenario_found = true;
+            }
+
             scenarios.push(ScenarioData {
                 name,
                 new: current.new,
@@ -71,6 +89,19 @@ unsafe fn wrap_raw_tests(
 
         tests.push(TestData { name, scenarios });
     }
+
+    match specific_impl {
+        Some(x) if !specific_impl_found => {
+            panic!("no impl with the name `{}` was found", x);
+        }
+        _ => {}
+    }
+    match specific_scenario {
+        Some(x) if !specific_scenario_found => {
+            panic!("no scenario with the name `{}` was found", x);
+        }
+        _ => {}
+    }
 }
 
 unsafe fn load(
@@ -79,6 +110,8 @@ unsafe fn load(
     tests: &mut Vec<TestData>,
     is_bench: bool,
     is_validation: bool,
+    specific_impl: Option<String>,
+    specific_scenario: Option<String>,
 ) -> Result<()> {
     println!("loading {path}");
 
@@ -86,7 +119,15 @@ unsafe fn load(
     let load_tests: Symbol<FnLoadTests> = lib.get(b"load_tests\0")?;
 
     let raw_tests = load_tests();
-    wrap_raw_tests(prefix, raw_tests, tests, is_bench, is_validation);
+    wrap_raw_tests(
+        prefix,
+        raw_tests,
+        tests,
+        is_bench,
+        is_validation,
+        specific_impl,
+        specific_scenario,
+    );
 
     Ok(())
 }
@@ -160,6 +201,13 @@ struct Args {
     /// Enable bench tests
     #[arg(short, long, default_value = "bench")]
     kinds: String,
+
+    /// Run only a specific impl
+    #[arg(short, long)]
+    impl_name: Option<String>,
+    /// Run only a specific scenario
+    #[arg(short, long)]
+    scenario: Option<String>,
 }
 
 const DL_NAMES: (&str, &str) = if cfg!(target_os = "windows") {
@@ -269,7 +317,15 @@ fn main_impl() -> Result<()> {
     let mut tests = Vec::with_capacity(16);
     unsafe {
         let (rust_path, _cpp_path) = DL_NAMES;
-        load("rust", rust_path, &mut tests, is_bench, is_validation)?;
+        load(
+            "rust",
+            rust_path,
+            &mut tests,
+            is_bench,
+            is_validation,
+            args.impl_name,
+            args.scenario,
+        )?;
         // load("cpp", cpp_path, &mut tests)?;
         println!();
     };
