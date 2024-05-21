@@ -83,7 +83,7 @@ pub unsafe extern "C" fn load_tests() -> RawLoadResult {
         list_impl!(nonnull_impl),
         list_impl!(index_impl),
         list_impl!(raw_impl),
-        //list_impl!(rc_impl),
+        list_impl!(rc_impl),
         list_impl!(hashmap_impl),
         list_impl!(btreemap_impl),
         // sol!(index_impl),
