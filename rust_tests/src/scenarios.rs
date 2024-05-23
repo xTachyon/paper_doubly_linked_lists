@@ -405,7 +405,7 @@ impl<'x, L: DoubleLinkedList<'x, String>> Scenario<'x> for FindString<L> {
     type Impl = L;
 
     fn new(init: ScenarioInit<'x>) -> Self {
-        let iterations = init.percent_u64(1_000);
+        let iterations = init.percent_u64(1_000_000);
         let mut list = L::new(init.alloc, iterations as usize);
         let mut s = String::with_capacity(4096);
         for _ in 0..iterations {
