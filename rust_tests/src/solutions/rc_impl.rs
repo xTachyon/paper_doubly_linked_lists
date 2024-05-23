@@ -62,7 +62,7 @@ impl<T> Implementation<T> {
     }
 }
 
-impl<'x, T: Clone + PartialEq + Debug> DoubleLinkedList<'x, T> for Implementation<T> {
+impl<'x, T: Clone + Debug> DoubleLinkedList<'x, T> for Implementation<T> {
     type NodeRef = NodeRef<T>;
 
     fn new(alloc: &'static TheAlloc, _capacity: usize) -> Self {

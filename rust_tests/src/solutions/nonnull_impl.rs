@@ -37,7 +37,7 @@ impl<'x, T> Implementation<'x, T> {
     }
 }
 
-impl<'x, T: Copy + PartialEq + Debug> DoubleLinkedList<'x, T> for Implementation<'x, T> {
+impl<'x, T> DoubleLinkedList<'x, T> for Implementation<'x, T> {
     type NodeRef = NonNull<Node<T>>;
 
     fn new(alloc: &'x TheAlloc, _capacity: usize) -> Self {

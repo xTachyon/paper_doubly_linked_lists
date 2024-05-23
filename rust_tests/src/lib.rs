@@ -58,6 +58,9 @@ macro_rules! list_impl {
             sv::<Last<solutions::$name::Implementation<u64>>>("last"),
             sv::<Last<solutions::$name::Implementation<u64>>>("order"),
             // bench
+            sb::<FindString<solutions::$name::Implementation<String>>>("find_string"),
+            sb::<IteratePages<solutions::$name::Implementation<Page>>>("iterate_pages"),
+            sb::<AddFrontBack<solutions::$name::Implementation<u64>>>("add_front_back"),
             sb::<SearchMiddle<solutions::$name::Implementation<u64>>>("search_middle"),
             sb::<SumScenario<solutions::$name::Implementation<u64>>>("sum"),
             sb::<PushDeleteOneScenario<solutions::$name::Implementation<u64>>>("push_delete_one"),

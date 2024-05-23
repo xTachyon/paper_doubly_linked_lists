@@ -369,8 +369,11 @@ fn main_impl() -> Result<()> {
 }
 
 fn main() -> Result<()> {
-    let start = Instant::now();
-    let result = main_impl();
-    println!("total time: {:?}", start.elapsed());
-    result
+    let f = || {
+        let start = Instant::now();
+        let result = main_impl();
+        println!("total time: {:?}", start.elapsed());
+        result
+    };
+    stacker::grow(64 * 1024 * 1024, f)
 }

@@ -26,6 +26,7 @@ humansize = "2"
 snmalloc-sys = "0.3.5"
 indexmap = "2"
 hashbrown = { version = "0.14.5", features = ["nightly"] }
+stacker = "0.1.15"
 
 [profile.release]
 lto = "thin"

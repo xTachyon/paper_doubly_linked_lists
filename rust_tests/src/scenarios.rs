@@ -1,4 +1,4 @@
-use std::{hint::black_box, marker::PhantomData};
+use std::{array, hint::black_box, marker::PhantomData};
 use tests_api::TheAlloc;
 
 use crate::solutions::double_linked_list::DoubleLinkedList;
@@ -6,7 +6,7 @@ use crate::solutions::double_linked_list::DoubleLinkedList;
 pub struct ScenarioInit<'x> {
     pub alloc: &'static TheAlloc,
     pub percent: u32,
-    pub _p: PhantomData<&'x ()>
+    pub _p: PhantomData<&'x ()>,
 }
 impl<'x> ScenarioInit<'x> {
     fn percent_usize(&self, x: usize) -> usize {
@@ -133,7 +133,7 @@ impl<'x, L: DoubleLinkedList<'x, u64>> Scenario<'x> for Fragmentation<'x, L> {
 
     fn run(self) {
         let mut list = L::new(self.init.alloc, 1000);
-        let iterations = self.init.percent_u64(1_000);        
+        let iterations = self.init.percent_u64(1_000);
         for _ in 0..=iterations {
             let mut to_delete = Vec::with_capacity(iterations as usize);
 
@@ -310,8 +310,124 @@ impl<'x, L: DoubleLinkedList<'x, u64>> Scenario<'x> for SearchMiddle<L> {
             let node = list.search(f).unwrap();
 
             assert_eq!(list.value(node.clone()), Some(&to_find));
-            assert_eq!(list.value(list.prec(node.clone()).unwrap()), Some(&(to_find - 1)));
+            assert_eq!(
+                list.value(list.prec(node.clone()).unwrap()),
+                Some(&(to_find - 1))
+            );
             assert_eq!(list.value(list.next(node).unwrap()), Some(&(to_find + 1)));
+        }
+    }
+}
+
+// ----------------------------------------------------------------------------
+
+pub struct AddFrontBack<'x, L> {
+    init: ScenarioInit<'x>,
+    _p: PhantomData<L>,
+}
+impl<'x, L: DoubleLinkedList<'x, u64>> Scenario<'x> for AddFrontBack<'x, L> {
+    type Impl = L;
+
+    fn new(init: ScenarioInit<'x>) -> Self {
+        Self {
+            init,
+            _p: PhantomData,
+        }
+    }
+
+    fn run(self) {
+        let iterations = self.init.percent_usize(1_000_000);
+        let mut list = L::new(self.init.alloc, iterations);
+
+        for i in 0..iterations {
+            list.push_back(i as u64);
+            list.push_front(i as u64);
+        }
+    }
+}
+
+// ----------------------------------------------------------------------------
+
+#[derive(Clone, Debug)]
+#[repr(align(4096))]
+pub struct Page {
+    data: [u8; 4096],
+}
+
+pub struct IteratePages<L> {
+    list: L,
+    sum_one: u64,
+    _p: PhantomData<L>,
+}
+impl<'x, L: DoubleLinkedList<'x, Page>> Scenario<'x> for IteratePages<L> {
+    type Impl = L;
+
+    fn new(init: ScenarioInit<'x>) -> Self {
+        let iterations = init.percent_u64(1_000);
+        let mut list = L::new(init.alloc, iterations as usize);
+        let page = Page {
+            data: array::from_fn(|x| x as u8),
+        };
+        let sum_one = page.data.iter().map(|x| *x as u64).sum();
+        for _ in 0..iterations {
+            list.push_back(page.clone());
+            list.push_front(page.clone());
+        }
+
+        Self {
+            list,
+            sum_one,
+            _p: PhantomData,
+        }
+    }
+
+    fn run(self) {
+        let list = self.list;
+
+        let mut first = list.first();
+        while let Some(element) = first {
+            let value = list.value(element.clone()).unwrap();
+            let current_sum = value.data.iter().map(|x| *x as u64).sum::<u64>();
+            assert_eq!(current_sum, self.sum_one);
+            first = list.next(element);
+        }
+    }
+}
+
+// ----------------------------------------------------------------------------
+
+pub struct FindString<L> {
+    list: L,
+    iterations: u64,
+    _p: PhantomData<L>,
+}
+impl<'x, L: DoubleLinkedList<'x, String>> Scenario<'x> for FindString<L> {
+    type Impl = L;
+
+    fn new(init: ScenarioInit<'x>) -> Self {
+        let iterations = init.percent_u64(1_000);
+        let mut list = L::new(init.alloc, iterations as usize);
+        let mut s = String::with_capacity(4096);
+        for _ in 0..iterations {
+            s.push_str("abc");
+            list.push_back(s.clone());
+        }
+
+        Self {
+            list,
+            iterations,
+            _p: PhantomData,
+        }
+    }
+
+    fn run(self) {
+        let list = self.list;
+
+        let mut s = String::with_capacity(4096);
+        for _ in 0..self.iterations {
+            s.push_str("abc");
+
+            list.search(|x| *x == s).expect("String should be found");
         }
     }
 }

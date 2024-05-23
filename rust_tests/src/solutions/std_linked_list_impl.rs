@@ -18,20 +18,12 @@ impl<'x, T> DoubleLinkedList<'x, T> for Implementation<T> {
         }
     }
 
-    fn insert_after(&mut self, _node: Self::NodeRef, _value: T) -> Self::NodeRef {
-        todo!()
-    }
-
-    fn insert_before(&mut self, _node: Self::NodeRef, _value: T) -> Self::NodeRef {
-        todo!()
-    }
-
     fn push_back(&mut self, value: T) -> Self::NodeRef {
         self.nodes.push_back(value)
     }
 
-    fn push_front(&mut self, _value: T) -> Self::NodeRef {
-        todo!()
+    fn push_front(&mut self, value: T) -> Self::NodeRef {
+        self.nodes.push_front(value)
     }
 
     unsafe fn delete(&mut self, node: Self::NodeRef) {
@@ -65,11 +57,19 @@ impl<'x, T> DoubleLinkedList<'x, T> for Implementation<T> {
         self.nodes.back_raw()
     }
 
+    fn insert_after(&mut self, _node: Self::NodeRef, _value: T) -> Self::NodeRef {
+        todo!()
+    }
+
+    fn insert_before(&mut self, _node: Self::NodeRef, _value: T) -> Self::NodeRef {
+        todo!()
+    }
+
     fn value(&self, node: Self::NodeRef) -> Option<&T> {
         unsafe { Some(&node.as_ref().element) }
     }
 
-    fn value_mut(&mut self, _node: Self::NodeRef) -> Option<&mut T> {
-        todo!()
+    fn value_mut(&mut self, mut node: Self::NodeRef) -> Option<&mut T> {
+        unsafe { Some(&mut node.as_mut().element) }
     }
 }

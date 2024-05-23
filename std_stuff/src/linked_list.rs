@@ -871,13 +871,14 @@ impl<T, A: Allocator> LinkedList<T, A> {
     /// dl.push_front(1);
     /// assert_eq!(dl.front().unwrap(), &1);
     /// ```
-    pub fn push_front(&mut self, elt: T) {
+    pub fn push_front(&mut self, elt: T) -> NonNull<Node<T>>  {
         let node = Box::new_in(Node::new(elt), &self.alloc);
         let node_ptr = NonNull::from(Box::leak(node));
         // SAFETY: node_ptr is a unique pointer to a node we boxed with self.alloc and leaked
         unsafe {
             self.push_front_node(node_ptr);
         }
+        node_ptr
     }
 
     /// Removes the first element and returns it, or `None` if the list is

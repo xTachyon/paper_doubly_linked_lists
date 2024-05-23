@@ -7,19 +7,19 @@ type DefaultKey = slotmap::DefaultKey;
 
 #[allow(dead_code)]
 #[derive(Copy, Clone, Debug, PartialEq)]
-pub struct Node<T: Debug> {
+pub struct Node<T> {
     next: Option<DefaultKey>,
     prec: Option<DefaultKey>,
     value: T,
 }
 
-pub struct Implementation<'x, T: Debug> {
+pub struct Implementation<'x, T> {
     map: SlotMap<DefaultKey, Node<T>, &'x TheAlloc>,
     head: Option<DefaultKey>,
     tail: Option<DefaultKey>,
 }
 
-impl<'x, T: Debug + PartialEq + Copy> DoubleLinkedList<'x, T> for Implementation<'x, T> {
+impl<'x, T> DoubleLinkedList<'x, T> for Implementation<'x, T> {
     type NodeRef = DefaultKey;
 
     fn new(alloc: &'x TheAlloc, capacity: usize) -> Self {
@@ -91,7 +91,7 @@ impl<'x, T: Debug + PartialEq + Copy> DoubleLinkedList<'x, T> for Implementation
     }
 
     unsafe fn delete(&mut self, key: Self::NodeRef) {
-        let node = self.map[key];
+        let node = &self.map[key];
         let prec = node.prec;
         let next = node.next;
 

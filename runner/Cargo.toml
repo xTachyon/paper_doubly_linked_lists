@@ -14,3 +14,4 @@ clap.workspace = true
 # stats_alloc.workspace = true
 humansize.workspace = true
 indexmap.workspace = true
+stacker.workspace = true
