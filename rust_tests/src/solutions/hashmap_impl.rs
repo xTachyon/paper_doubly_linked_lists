@@ -21,7 +21,7 @@ pub struct Implementation<T> {
 impl<T> Implementation<T> {
     fn allocate_node(&mut self, value: T) -> usize {
         let key = self.key_index;
-        self.key_index += 1;
+        self.key_index = self.key_index.checked_add(1).unwrap();
         self.nodes.insert(
             key,
             Node {
