@@ -253,6 +253,7 @@ dependencies = [
  "humansize",
  "indexmap",
  "libloading",
+ "rust_tests",
  "stacker",
  "tests_api",
 ]

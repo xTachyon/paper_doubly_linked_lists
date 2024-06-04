@@ -13,6 +13,7 @@ resolver = "2"
 [workspace.dependencies]
 tests_api = { path = "tests_api" }
 std_stuff = { path = "std_stuff" }
+rust_tests = { path = "rust_tests" }
 # cpp_tests_build = { path = "cpp_tests_build" }
 
 anyhow = "1"

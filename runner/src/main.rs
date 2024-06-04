@@ -115,8 +115,13 @@ unsafe fn load(
 ) -> Result<()> {
     println!("loading {path}");
 
-    let lib = ManuallyDrop::new(Library::new(path)?);
-    let load_tests: Symbol<FnLoadTests> = lib.get(b"load_tests\0")?;
+    let load_tests = if false {
+        let lib = ManuallyDrop::new(Library::new(path)?);
+        let _load_tests: Symbol<FnLoadTests> = lib.get(b"load_tests\0")?;
+        todo!()
+    } else {
+        rust_tests::load_tests
+    };
 
     let raw_tests = load_tests();
     wrap_raw_tests(
@@ -369,7 +374,9 @@ fn main_impl() -> Result<()> {
         output.push(arr);
     }
 
-    create_table().print(output.iter());
+    if is_bench {
+        create_table().print(output.iter());
+    }
 
     Ok(())
 }
