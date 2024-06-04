@@ -27,18 +27,7 @@ impl<'x, T> DoubleLinkedList<'x, T> for Implementation<T> {
     }
 
     unsafe fn delete(&mut self, node: Self::NodeRef) {
-        let mut index = 0;
-        let mut current = self.nodes.front_raw();
-        while let Some(x) = current {
-            if x == node {
-                break;
-            }
-            index += 1;
-            current = x.as_ref().next;
-        }
-        let current = current.unwrap();
-        assert_eq!(current, node);
-        self.nodes.remove(index);
+        self.nodes.remove_extremely_unsafe(node);
     }
 
     fn next(&self, node: Self::NodeRef) -> Option<Self::NodeRef> {

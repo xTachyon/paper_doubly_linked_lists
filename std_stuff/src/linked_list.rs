@@ -1,3 +1,6 @@
+// Taken from https://github.com/rust-lang/rust/blob/7c52d2db6348b038276198e88a835125849f322e/library/alloc/src/collections/linked_list.rs
+// Modified to work outside std in order to test the implementation against other ways to make a linked list.
+
 //! A doubly-linked list with owned nodes.
 //!
 //! The `LinkedList` allows pushing and popping elements at either end
@@ -1056,6 +1059,12 @@ impl<T, A: Allocator> LinkedList<T, A> {
             }
             cursor.remove_current().unwrap()
         }
+    }
+
+    pub unsafe fn remove_extremely_unsafe(&mut self, ptr: NonNull<Node<T>>) {
+        let mut cursor = self.cursor_front_mut();
+        cursor.current = Some(ptr);
+        cursor.remove_current().unwrap();
     }
 
     /// Retains only the elements specified by the predicate.
