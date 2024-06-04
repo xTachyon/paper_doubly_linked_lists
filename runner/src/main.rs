@@ -160,12 +160,13 @@ fn bench<'x>(
     results: &mut IndexMap<&str, Vec<TestResult<'x>>>,
     allocator_kind: AllocatorKind,
     percent: u32,
+    is_bench: bool,
 ) {
     println!("testing {}", test.name);
 
     for i in test.scenarios.iter() {
         println!("    scenario {}", i.name);
-        let alloc = allocator_kind.create();
+        let alloc = allocator_kind.create(is_bench);
         let alloc: &'static dyn Allocator = unsafe {
             // TODO: this is here to transmute the lifetime to static.
             // This is not great and should fixed at some point.
@@ -238,10 +239,15 @@ enum AllocatorKind {
     Sn,
 }
 impl AllocatorKind {
-    fn create(self) -> Box<dyn Allocator> {
+    fn create(self, is_bench: bool) -> Box<dyn Allocator> {
+        let size = if is_bench {
+            2 * 1024 * 1024 * 1024
+        } else {
+            4096
+        };
         match self {
             AllocatorKind::System => Box::new(Global),
-            AllocatorKind::Arena => Box::new(ArenaAlloc::new(2 * 1024 * 1024 * 1024)),
+            AllocatorKind::Arena => Box::new(ArenaAlloc::new(size)),
             AllocatorKind::Sn => Box::new(SnAlloc::new()),
         }
     }
@@ -343,7 +349,7 @@ fn main_impl() -> Result<()> {
 
     let mut results = IndexMap::new();
     for i in tests.iter() {
-        bench(i, &mut results, allocator_kind, args.percent);
+        bench(i, &mut results, allocator_kind, args.percent, is_bench);
     }
     println!();
 
