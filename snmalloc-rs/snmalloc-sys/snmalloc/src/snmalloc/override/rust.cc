@@ -52,6 +52,26 @@ extern "C" SNMALLOC_EXPORT void SNMALLOC_NAME_MANGLE(rust_statistics)(
   *peak_memory_usage = StandardConfig::Backend::get_peak_usage();
 }
 
+void* operator new(size_t size)
+{
+  auto ptr = malloc(size);
+  if (ptr == nullptr)
+  {
+    fprintf(stderr, "snmalloc: allocation failed\n");
+    abort();
+  }
+  return ptr;
+}
+
+void operator delete(void* ptr)
+{
+  free(ptr);
+}
+void operator delete(void* ptr, size_t)
+{
+  free(ptr);
+}
+
 extern "C" SNMALLOC_EXPORT Alloc* SNMALLOC_NAME_MANGLE(rust_inst_create)()
 {
   return new Alloc;
