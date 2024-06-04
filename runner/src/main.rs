@@ -156,11 +156,17 @@ fn bench<'x>(
     allocator_kind: AllocatorKind,
     percent: u32,
 ) {
-    println!("testing {}..", test.name);
+    println!("testing {}", test.name);
 
     for i in test.scenarios.iter() {
-        let alloc = StatsAllocator::new(Box::leak(allocator_kind.create()) as &_);
-        // TODO: leak
+        println!("    scenario {}", i.name);
+        let alloc = allocator_kind.create();
+        let alloc: &'static dyn Allocator = unsafe {
+            // TODO: this is here to transmute the lifetime to static.
+            // This is not great and should fixed at some point.
+            std::mem::transmute(&*alloc)
+        };
+        let alloc = StatsAllocator::new(alloc);
 
         let alloc_ptr: *const dyn Allocator = &alloc;
         let alloc_ptr = &alloc_ptr;

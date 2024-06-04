@@ -59,6 +59,7 @@ macro_rules! list_impl {
             sv::<Last<solutions::$name::Implementation<u64>>>("order"),
             // bench
             sb::<FindString<solutions::$name::Implementation<String>>>("find_string"),
+            sb::<PushPages<solutions::$name::Implementation<Page>>>("push_pages"),
             sb::<IteratePages<solutions::$name::Implementation<Page>>>("iterate_pages"),
             sb::<AddFrontBack<solutions::$name::Implementation<u64>>>("add_front_back"),
             sb::<SearchMiddle<solutions::$name::Implementation<u64>>>("search_middle"),

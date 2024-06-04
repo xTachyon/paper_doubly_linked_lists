@@ -1,5 +1,6 @@
 #![feature(allocator_api)]
 #![allow(unused)]
+#![allow(unexpected_cfgs)]
 
 
 #![doc(html_root_url = "https://docs.rs/slotmap/1.0.7")]

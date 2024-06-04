@@ -1,3 +1,5 @@
+#![allow(unexpected_cfgs)]
+
 #[cfg(feature = "build_cc")]
 fn main() {
     let (debug, optim_unix, optim_msvc, prof_msvc_hint) = if cfg!(feature = "debug") {

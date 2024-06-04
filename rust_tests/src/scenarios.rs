@@ -137,17 +137,19 @@ impl<'x, L: DoubleLinkedList<'x, u64>> Scenario<'x> for Fragmentation<'x, L> {
         for _ in 0..=iterations {
             let mut to_delete = Vec::with_capacity(iterations as usize);
 
+            let mut m = 2u64;
+
             for i in 0..10_000 {
-                list.push_back(i);
-            }
-
-            for i in 0..1000 {
                 let node = list.push_back(i);
+                if i % m != 0 {
+                    continue;
+                }
                 to_delete.push(node);
-            }
 
-            for i in 0..1000 {
-                list.push_back(i);
+                m += 1;
+                if m > 7 {
+                    m = 2;
+                }
             }
 
             for i in to_delete {
@@ -272,7 +274,45 @@ impl<'x, L: DoubleLinkedList<'x, u64>> Scenario<'x> for UseAfterDelete<'x, L> {
         let node = list.push_front(0xDA);
         unsafe { list.delete(node.clone()) };
         // UB incoming
-        black_box(list.value(node));
+        let value = black_box(list.value(node.clone()));
+        if let Some(v) = value {
+            if *v == 0xDA {
+                panic!("read used after free value");
+            }
+        }
+    }
+}
+
+// ----------------------------------------------------------------------------
+
+// TODO: add to validation scenarios
+pub struct UseAfterDeleteAndReinsert<'x, L> {
+    init: ScenarioInit<'x>,
+    _p: PhantomData<L>,
+}
+impl<'x, L: DoubleLinkedList<'x, u64>> Scenario<'x> for UseAfterDeleteAndReinsert<'x, L> {
+    type Impl = L;
+
+    fn new(init: ScenarioInit<'x>) -> Self {
+        Self {
+            init,
+            _p: PhantomData,
+        }
+    }
+
+    fn run(self) {
+        let mut list = L::new(self.init.alloc, 2);
+
+        let node = list.push_front(0xDA);
+        unsafe { list.delete(node.clone()) };
+        list.push_front(0xDD);
+        // UB incoming
+        let value = list.value(node.clone());
+        if let Some(v) = value {
+            if *v == 0xDD {
+                panic!("read used after reinsert with old node");
+            }
+        }
     }
 }
 
@@ -354,6 +394,35 @@ pub struct Page {
     data: [u8; 4096],
 }
 
+pub struct PushPages<'x, L> {
+    init: ScenarioInit<'x>,
+    _p: PhantomData<L>,
+}
+impl<'x, L: DoubleLinkedList<'x, Page>> Scenario<'x> for PushPages<'x, L> {
+    type Impl = L;
+
+    fn new(init: ScenarioInit<'x>) -> Self {
+        Self {
+            init,
+            _p: PhantomData,
+        }
+    }
+
+    fn run(self) {
+        let init = self.init;
+        let iterations = init.percent_u64(1_000);
+        let mut list = L::new(init.alloc, iterations as usize);
+        let page = Page {
+            data: array::from_fn(|x| x as u8),
+        };
+
+        for _ in 0..iterations {
+            list.push_back(page.clone());
+            list.push_front(page.clone());
+        }
+    }
+}
+
 pub struct IteratePages<L> {
     list: L,
     sum_one: u64,
@@ -405,7 +474,7 @@ impl<'x, L: DoubleLinkedList<'x, String>> Scenario<'x> for FindString<L> {
     type Impl = L;
 
     fn new(init: ScenarioInit<'x>) -> Self {
-        let iterations = init.percent_u64(1_000_000);
+        let iterations = init.percent_u64(10_000);
         let mut list = L::new(init.alloc, iterations as usize);
         let mut s = String::with_capacity(4096);
         for _ in 0..iterations {
@@ -431,3 +500,4 @@ impl<'x, L: DoubleLinkedList<'x, String>> Scenario<'x> for FindString<L> {
         }
     }
 }
+
