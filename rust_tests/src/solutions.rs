@@ -1,5 +1,6 @@
 pub mod btreemap_impl;
 pub mod double_linked_list;
+pub mod gen_arena_impl;
 pub mod handle_impl;
 pub mod hashmap_impl;
 pub mod index_impl;

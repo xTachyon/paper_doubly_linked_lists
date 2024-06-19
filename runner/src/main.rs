@@ -347,6 +347,12 @@ fn main_impl() -> Result<()> {
         println!();
     };
 
+    println!(
+        "no of impls: {}\nno of scenarios: {}\n",
+        tests.len(),
+        tests.first().unwrap().scenarios.len()
+    );
+
     let mut results = IndexMap::new();
     for i in tests.iter() {
         bench(i, &mut results, allocator_kind, args.percent, is_bench);

@@ -1,3 +1,5 @@
+#![feature(allocator_api)]
+
 /*!
 [![](https://docs.rs/generational-arena/badge.svg)](https://docs.rs/generational-arena/)
 [![](https://img.shields.io/crates/v/generational-arena.svg)](https://crates.io/crates/generational-arena)
@@ -153,8 +155,9 @@ cfg_if::cfg_if! {
     }
 }
 
+use core::alloc::Allocator;
 use core::cmp;
-use core::iter::{self, Extend, FromIterator, FusedIterator};
+use core::iter::{self, Extend, FusedIterator};
 use core::mem;
 use core::ops;
 use core::slice;
@@ -167,8 +170,8 @@ mod serde_impl;
 ///
 /// [See the module-level documentation for example usage and motivation.](./index.html)
 #[derive(Clone, Debug)]
-pub struct Arena<T> {
-    items: Vec<Entry<T>>,
+pub struct Arena<T, A: Allocator> {
+    items: Vec<Entry<T>, A>,
     generation: u64,
     free_list_head: Option<usize>,
     len: usize,
@@ -227,15 +230,15 @@ impl Index {
     }
 }
 
-const DEFAULT_CAPACITY: usize = 4;
+// const DEFAULT_CAPACITY: usize = 4;
 
-impl<T> Default for Arena<T> {
-    fn default() -> Arena<T> {
-        Arena::new()
-    }
-}
+// impl<T> Default for Arena<T> {
+//     fn default() -> Arena<T> {
+//         Arena::new()
+//     }
+// }
 
-impl<T> Arena<T> {
+impl<T, A: Allocator> Arena<T, A> {
     /// Constructs a new, empty `Arena`.
     ///
     /// # Examples
@@ -246,9 +249,9 @@ impl<T> Arena<T> {
     /// let mut arena = Arena::<usize>::new();
     /// # let _ = arena;
     /// ```
-    pub fn new() -> Arena<T> {
-        Arena::with_capacity(DEFAULT_CAPACITY)
-    }
+    // pub fn new() -> Arena<T> {
+    //     Arena::with_capacity(DEFAULT_CAPACITY)
+    // }
 
     /// Constructs a new, empty `Arena<T>` with the specified capacity.
     ///
@@ -269,10 +272,10 @@ impl<T> Arena<T> {
     /// // But now we are at capacity, and there is no more room.
     /// assert!(arena.try_insert(99).is_err());
     /// ```
-    pub fn with_capacity(n: usize) -> Arena<T> {
+    pub fn with_capacity_in(n: usize, alloc: A) -> Arena<T, A> {
         let n = cmp::max(n, 1);
         let mut arena = Arena {
-            items: Vec::new(),
+            items: Vec::new_in(alloc),
             generation: 0,
             free_list_head: None,
             len: 0,
@@ -910,7 +913,7 @@ impl<T> Arena<T> {
     /// assert!(arena.get(idx_1).is_none());
     /// assert!(arena.get(idx_2).is_none());
     /// ```
-    pub fn drain(&mut self) -> Drain<T> {
+    pub fn drain(&mut self) -> Drain<T, A> {
         let old_len = self.len;
         if !self.is_empty() {
             // Increment generation, but if there are no elements, do nothing to
@@ -966,9 +969,9 @@ impl<T> Arena<T> {
     }
 }
 
-impl<T> IntoIterator for Arena<T> {
+impl<T, A: Allocator> IntoIterator for Arena<T, A> {
     type Item = T;
-    type IntoIter = IntoIter<T>;
+    type IntoIter = IntoIter<T, A>;
     fn into_iter(self) -> Self::IntoIter {
         IntoIter {
             len: self.len,
@@ -998,12 +1001,12 @@ impl<T> IntoIterator for Arena<T> {
 /// }
 /// ```
 #[derive(Clone, Debug)]
-pub struct IntoIter<T> {
+pub struct IntoIter<T, A: Allocator> {
     len: usize,
-    inner: vec::IntoIter<Entry<T>>,
+    inner: vec::IntoIter<Entry<T>, A>,
 }
 
-impl<T> Iterator for IntoIter<T> {
+impl<T, A: Allocator> Iterator for IntoIter<T, A> {
     type Item = T;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -1027,7 +1030,7 @@ impl<T> Iterator for IntoIter<T> {
     }
 }
 
-impl<T> DoubleEndedIterator for IntoIter<T> {
+impl<T, A: Allocator> DoubleEndedIterator for IntoIter<T, A> {
     fn next_back(&mut self) -> Option<Self::Item> {
         loop {
             match self.inner.next_back() {
@@ -1045,15 +1048,15 @@ impl<T> DoubleEndedIterator for IntoIter<T> {
     }
 }
 
-impl<T> ExactSizeIterator for IntoIter<T> {
+impl<T, A: Allocator> ExactSizeIterator for IntoIter<T, A> {
     fn len(&self) -> usize {
         self.len
     }
 }
 
-impl<T> FusedIterator for IntoIter<T> {}
+impl<T, A: Allocator> FusedIterator for IntoIter<T, A> {}
 
-impl<'a, T> IntoIterator for &'a Arena<T> {
+impl<'a, T, A: Allocator> IntoIterator for &'a Arena<T, A> {
     type Item = (Index, &'a T);
     type IntoIter = Iter<'a, T>;
     fn into_iter(self) -> Self::IntoIter {
@@ -1151,7 +1154,7 @@ impl<'a, T> ExactSizeIterator for Iter<'a, T> {
 
 impl<'a, T> FusedIterator for Iter<'a, T> {}
 
-impl<'a, T> IntoIterator for &'a mut Arena<T> {
+impl<'a, T, A: Allocator> IntoIterator for &'a mut Arena<T, A> {
     type Item = (Index, &'a mut T);
     type IntoIter = IterMut<'a, T>;
     fn into_iter(self) -> Self::IntoIter {
@@ -1275,12 +1278,12 @@ impl<'a, T> FusedIterator for IterMut<'a, T> {}
 /// assert!(arena.get(idx_2).is_none());
 /// ```
 #[derive(Debug)]
-pub struct Drain<'a, T: 'a> {
+pub struct Drain<'a, T: 'a, A: Allocator> {
     len: usize,
-    inner: iter::Enumerate<vec::Drain<'a, Entry<T>>>,
+    inner: iter::Enumerate<vec::Drain<'a, Entry<T>, A>>,
 }
 
-impl<'a, T> Iterator for Drain<'a, T> {
+impl<'a, T, A: Allocator> Iterator for Drain<'a, T, A> {
     type Item = (Index, T);
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -1305,7 +1308,7 @@ impl<'a, T> Iterator for Drain<'a, T> {
     }
 }
 
-impl<'a, T> DoubleEndedIterator for Drain<'a, T> {
+impl<'a, T, A: Allocator> DoubleEndedIterator for Drain<'a, T, A> {
     fn next_back(&mut self) -> Option<Self::Item> {
         loop {
             match self.inner.next_back() {
@@ -1324,15 +1327,15 @@ impl<'a, T> DoubleEndedIterator for Drain<'a, T> {
     }
 }
 
-impl<'a, T> ExactSizeIterator for Drain<'a, T> {
+impl<'a, T, A: Allocator> ExactSizeIterator for Drain<'a, T, A> {
     fn len(&self) -> usize {
         self.len
     }
 }
 
-impl<'a, T> FusedIterator for Drain<'a, T> {}
+impl<'a, T, A: Allocator> FusedIterator for Drain<'a, T, A> {}
 
-impl<T> Extend<T> for Arena<T> {
+impl<T, A: Allocator> Extend<T> for Arena<T, A> {
     fn extend<I: IntoIterator<Item = T>>(&mut self, iter: I) {
         for t in iter {
             self.insert(t);
@@ -1340,19 +1343,19 @@ impl<T> Extend<T> for Arena<T> {
     }
 }
 
-impl<T> FromIterator<T> for Arena<T> {
-    fn from_iter<I: IntoIterator<Item = T>>(iter: I) -> Self {
-        let iter = iter.into_iter();
-        let (lower, upper) = iter.size_hint();
-        let cap = upper.unwrap_or(lower);
-        let cap = cmp::max(cap, 1);
-        let mut arena = Arena::with_capacity(cap);
-        arena.extend(iter);
-        arena
-    }
-}
+// impl<T, A: Allocator> FromIterator<T> for Arena<T, A> {
+//     fn from_iter<I: IntoIterator<Item = T>>(iter: I) -> Self {
+//         let iter = iter.into_iter();
+//         let (lower, upper) = iter.size_hint();
+//         let cap = upper.unwrap_or(lower);
+//         let cap = cmp::max(cap, 1);
+//         let mut arena = Arena::with_capacity(cap);
+//         arena.extend(iter);
+//         arena
+//     }
+// }
 
-impl<T> ops::Index<Index> for Arena<T> {
+impl<T, A: Allocator> ops::Index<Index> for Arena<T, A> {
     type Output = T;
 
     fn index(&self, index: Index) -> &Self::Output {
@@ -1360,7 +1363,7 @@ impl<T> ops::Index<Index> for Arena<T> {
     }
 }
 
-impl<T> ops::IndexMut<Index> for Arena<T> {
+impl<T, A: Allocator> ops::IndexMut<Index> for Arena<T, A> {
     fn index_mut(&mut self, index: Index) -> &mut Self::Output {
         self.get_mut(index).expect("No element at index")
     }

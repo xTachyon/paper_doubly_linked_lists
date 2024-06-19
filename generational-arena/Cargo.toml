@@ -40,5 +40,5 @@ harness = false
 default = ["std"]
 std = []
 
-[profile.bench]
-debug = true
+# [profile.bench]
+# debug = true
