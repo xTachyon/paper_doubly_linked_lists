@@ -15,6 +15,7 @@ tests_api = { path = "tests_api" }
 std_stuff = { path = "std_stuff" }
 rust_tests = { path = "rust_tests" }
 # cpp_tests_build = { path = "cpp_tests_build" }
+slab = { path = "slab" }
 
 anyhow = "1"
 libloading = "0.8.3"

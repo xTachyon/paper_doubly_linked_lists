@@ -6,6 +6,7 @@ pub mod index_impl;
 pub mod nonnull_impl;
 pub mod raw_impl;
 pub mod rc_impl;
+pub mod slab_impl;
 pub mod slotmap_impl;
 pub mod std_linked_list_impl;
 

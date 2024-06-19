@@ -12,4 +12,5 @@ std_stuff.workspace = true
 
 slotmap.workspace = true
 hashbrown.workspace = true
+slab.workspace = true
 # stats_alloc.workspace = true
