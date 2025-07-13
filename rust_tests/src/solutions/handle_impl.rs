@@ -61,6 +61,7 @@ struct Element<T> {
 }
 pub struct Implementation<'x, T> {
     data: Vec<Option<Element<T>>, &'x TheAlloc>,
+    free_list: Vec<u32>,
     // TODO: rename to first, last
     head: Handle<T>,
     tail: Handle<T>,
@@ -71,6 +72,7 @@ impl<'x, T> DoubleLinkedList<'x, T> for Implementation<'x, T> {
     fn new(alloc: &'x TheAlloc, capacity: usize) -> Self {
         Self {
             data: Vec::with_capacity_in(capacity, alloc),
+            free_list: Vec::with_capacity(32),
             head: Handle::INVALID,
             tail: Handle::INVALID,
         }
@@ -153,6 +155,7 @@ impl<'x, T> DoubleLinkedList<'x, T> for Implementation<'x, T> {
             self.tail = p;
         }
         self.data[node.index as usize] = None;
+        self.free_list.push(node.index);
     }
 
     fn next(&self, node: Self::NodeRef) -> Option<Self::NodeRef> {
@@ -208,14 +211,30 @@ impl<'x, T> DoubleLinkedList<'x, T> for Implementation<'x, T> {
 
 impl<'x, T> Implementation<'x, T> {
     fn allocate(&mut self, value: T) -> Handle<T> {
-        let idx = self.data.len();
+        let allocated = self.data.len();
+        let idx = self
+            .free_list
+            .pop()
+            .map(|f| f as usize)
+            .unwrap_or(allocated);
+
         let h = Handle::new(idx as u32);
-        self.data.push(Some(Element {
-            next: Handle::INVALID,
-            prec: Handle::INVALID,
-            value,
-            unique_id: h.unique_id,
-        }));
+        if idx < allocated {
+            self.data[idx] = Some(Element {
+                next: Handle::INVALID,
+                prec: Handle::INVALID,
+                value,
+                unique_id: h.unique_id,
+            });
+        }
+        else {
+            self.data.push(Some(Element {
+                next: Handle::INVALID,
+                prec: Handle::INVALID,
+                value,
+                unique_id: h.unique_id,
+            }));
+        }
         h
     }
     fn link(&mut self, n1: Handle<T>, n2: Handle<T>) {
