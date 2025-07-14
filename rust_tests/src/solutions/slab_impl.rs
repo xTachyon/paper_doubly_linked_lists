@@ -67,8 +67,8 @@ impl<'x, T> DoubleLinkedList<'x, T> for Implementation<'x, T> {
     fn push_front(&mut self, value: T) -> Self::NodeRef {
         if let (Some(head), Some(tail)) = (self.head, self.tail) {
             let node = Node {
-                next: None,
-                prec: Some(head),
+                next: Some(head),
+                prec: None,
                 value,
             };
             let key = self.map.insert(node);
