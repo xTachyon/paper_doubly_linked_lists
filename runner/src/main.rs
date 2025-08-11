@@ -113,7 +113,7 @@ unsafe fn load(
     specific_impl: Option<String>,
     specific_scenario: Option<String>,
 ) -> Result<()> {
-    println!("loading {path}");
+    // println!("loading {path}");
 
     let load_tests = if false {
         let lib = ManuallyDrop::new(Library::new(path)?);
@@ -162,10 +162,10 @@ fn bench<'x>(
     percent: u32,
     is_bench: bool,
 ) {
-    println!("testing {}", test.name);
+    // println!("testing {}", test.name);
 
     for i in test.scenarios.iter() {
-        println!("    scenario {}", i.name);
+        //println!("    scenario {}", i.name);
         let alloc = allocator_kind.create(is_bench);
         let alloc: &'static dyn Allocator = unsafe {
             // TODO: this is here to transmute the lifetime to static.
@@ -323,13 +323,13 @@ fn main_impl() -> Result<()> {
     if is_validation && allocator_kind != AllocatorKind::Arena {
         panic!("validation must be run with arena allocator");
     }
-    println!(
-        "allocator: {}\npercent: {}\nbench: {}\nvalidation: {}",
-        allocator_kind.name(),
-        args.percent,
-        is_bench,
-        is_validation
-    );
+    // println!(
+    //     "allocator: {}\npercent: {}\nbench: {}\nvalidation: {}",
+    //     allocator_kind.name(),
+    //     args.percent,
+    //     is_bench,
+    //     is_validation
+    // );
 
     let mut tests = Vec::with_capacity(16);
     unsafe {
@@ -344,20 +344,20 @@ fn main_impl() -> Result<()> {
             args.scenario,
         )?;
         // load("cpp", cpp_path, &mut tests)?;
-        println!();
+        //println!();
     };
 
-    println!(
-        "no of impls: {}\nno of scenarios: {}\n",
-        tests.len(),
-        tests.first().unwrap().scenarios.len()
-    );
+    // println!(
+    //     "no of impls: {}\nno of scenarios: {}\n",
+    //     tests.len(),
+    //     tests.first().unwrap().scenarios.len()
+    // );
 
     let mut results = IndexMap::new();
     for i in tests.iter() {
         bench(i, &mut results, allocator_kind, args.percent, is_bench);
     }
-    println!();
+    // println!();
 
     let mut output: Vec<[&dyn Display; 7]> = Vec::with_capacity(64);
     for tests in results.values_mut() {
@@ -393,12 +393,14 @@ fn main_impl() -> Result<()> {
     Ok(())
 }
 
+
 fn main() -> Result<()> {
     let f = || {
-        let start = Instant::now();
-        let result = main_impl();
-        println!("total time: {:?}", start.elapsed());
-        result
+        loop{
+            let start = Instant::now();
+            let _ = main_impl();
+            //println!("total time: {:?}", start.elapsed());
+        }
     };
     stacker::grow(64 * 1024 * 1024, f)
 }
