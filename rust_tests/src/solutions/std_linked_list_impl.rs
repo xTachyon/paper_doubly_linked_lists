@@ -46,12 +46,38 @@ impl<'x, T> DoubleLinkedList<'x, T> for Implementation<T> {
         self.nodes.back_raw()
     }
 
-    fn insert_after(&mut self, _node: Self::NodeRef, _value: T) -> Self::NodeRef {
-        todo!()
+    fn insert_after(&mut self, node: Self::NodeRef, value: T) -> Self::NodeRef {
+        let target_elem_ptr = unsafe { &(*node.as_ptr()).element as *const T };
+        let mut cursor = self.nodes.cursor_front_mut();
+        loop {
+            if let Some(curr) = cursor.current() {
+                if (curr as *const T) == target_elem_ptr {
+                    cursor.insert_after(value);
+                    return unsafe { (*node.as_ptr()).next.unwrap() };
+                }
+                cursor.move_next();
+            } else {
+                break;
+            }
+        }
+        panic!("insert_after called with a node that is not in this list")
     }
 
-    fn insert_before(&mut self, _node: Self::NodeRef, _value: T) -> Self::NodeRef {
-        todo!()
+    fn insert_before(&mut self, node: Self::NodeRef, value: T) -> Self::NodeRef {
+        let target_elem_ptr = unsafe { &(*node.as_ptr()).element as *const T };
+        let mut cursor = self.nodes.cursor_front_mut();
+        loop {
+            if let Some(curr) = cursor.current() {
+                if (curr as *const T) == target_elem_ptr {
+                    cursor.insert_before(value);
+                    return unsafe { (*node.as_ptr()).prev.unwrap() };
+                }
+                cursor.move_next();
+            } else {
+                break;
+            }
+        }
+        panic!("insert_before called with a node that is not in this list")
     }
 
     fn value(&self, node: Self::NodeRef) -> Option<&T> {

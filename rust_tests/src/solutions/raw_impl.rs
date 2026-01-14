@@ -11,8 +11,8 @@ pub struct Node<T> {
 }
 
 pub struct Implementation<'x, T> {
-    head: *mut Node<T>,
-    tail: *mut Node<T>,
+    first: *mut Node<T>,
+    last: *mut Node<T>,
     alloc: &'x TheAlloc,
 }
 
@@ -40,13 +40,16 @@ impl<'x, T> DoubleLinkedList<'x, T> for Implementation<'x, T> {
 
     fn new(alloc: &'x TheAlloc, _capacity: usize) -> Self {
         Implementation {
-            head: ptr::null_mut(),
-            tail: ptr::null_mut(),
+            first: ptr::null_mut(),
+            last: ptr::null_mut(),
             alloc,
         }
     }
 
     fn insert_after(&mut self, node: Self::NodeRef, value: T) -> Self::NodeRef {
+        if node.is_null() {
+            panic!("insert_after called with null node");
+        }
         let new_node = self.allocate_node(value);
         unsafe {
             (*new_node).prev = node;
@@ -55,7 +58,7 @@ impl<'x, T> DoubleLinkedList<'x, T> for Implementation<'x, T> {
             if !(*node).next.is_null() {
                 (*(*node).next).prev = new_node;
             } else {
-                self.tail = new_node;
+                self.last = new_node;
             }
 
             (*node).next = new_node;
@@ -64,6 +67,9 @@ impl<'x, T> DoubleLinkedList<'x, T> for Implementation<'x, T> {
     }
 
     fn insert_before(&mut self, node: Self::NodeRef, value: T) -> Self::NodeRef {
+        if node.is_null() {
+            panic!("insert_before called with null node");
+        }
         let new_node = self.allocate_node(value);
         unsafe {
             (*new_node).next = node;
@@ -72,7 +78,7 @@ impl<'x, T> DoubleLinkedList<'x, T> for Implementation<'x, T> {
             if !(*node).prev.is_null() {
                 (*(*node).prev).next = new_node;
             } else {
-                self.head = new_node;
+                self.first = new_node;
             }
 
             (*node).prev = new_node;
@@ -83,15 +89,15 @@ impl<'x, T> DoubleLinkedList<'x, T> for Implementation<'x, T> {
     fn push_back(&mut self, value: T) -> Self::NodeRef {
         let new_node = self.allocate_node(value);
         unsafe {
-            (*new_node).prev = self.tail;
+            (*new_node).prev = self.last;
 
-            if !self.tail.is_null() {
-                (*self.tail).next = new_node;
+            if !self.last.is_null() {
+                (*self.last).next = new_node;
             } else {
-                self.head = new_node;
+                self.first = new_node;
             }
 
-            self.tail = new_node;
+            self.last = new_node;
         }
         new_node
     }
@@ -99,15 +105,15 @@ impl<'x, T> DoubleLinkedList<'x, T> for Implementation<'x, T> {
     fn push_front(&mut self, value: T) -> Self::NodeRef {
         let new_node = self.allocate_node(value);
         unsafe {
-            (*new_node).next = self.head;
+            (*new_node).next = self.first;
 
-            if !self.head.is_null() {
-                (*self.head).prev = new_node;
+            if !self.first.is_null() {
+                (*self.first).prev = new_node;
             } else {
-                self.tail = new_node;
+                self.last = new_node;
             }
 
-            self.head = new_node;
+            self.first = new_node;
         }
         new_node
     }
@@ -117,13 +123,13 @@ impl<'x, T> DoubleLinkedList<'x, T> for Implementation<'x, T> {
             if !(*node).prev.is_null() {
                 (*(*node).prev).next = (*node).next;
             } else {
-                self.head = (*node).next;
+                self.first = (*node).next;
             }
 
             if !(*node).next.is_null() {
                 (*(*node).next).prev = (*node).prev;
             } else {
-                self.tail = (*node).prev;
+                self.last = (*node).prev;
             }
 
             self.deallocate_node(node);
@@ -151,18 +157,18 @@ impl<'x, T> DoubleLinkedList<'x, T> for Implementation<'x, T> {
     }
 
     fn first(&self) -> Option<Self::NodeRef> {
-        if self.head.is_null() {
+        if self.first.is_null() {
             None
         } else {
-            Some(self.head)
+            Some(self.first)
         }
     }
 
     fn last(&self) -> Option<Self::NodeRef> {
-        if self.tail.is_null() {
+        if self.last.is_null() {
             None
         } else {
-            Some(self.tail)
+            Some(self.last)
         }
     }
 

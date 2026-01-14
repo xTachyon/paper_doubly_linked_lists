@@ -5,6 +5,20 @@ use std::{
     time::{Duration, Instant},
 };
 
+pub struct BoxedAllocator(pub Box<dyn Allocator>);
+
+unsafe impl Allocator for BoxedAllocator {
+    fn allocate(&self, layout: Layout) -> Result<NonNull<[u8]>, AllocError> {
+        self.0.allocate(layout)
+    }
+    fn allocate_zeroed(&self, layout: Layout) -> Result<NonNull<[u8]>, AllocError> {
+        self.0.allocate_zeroed(layout)
+    }
+    unsafe fn deallocate(&self, ptr: NonNull<u8>, layout: Layout) {
+        self.0.deallocate(ptr, layout)
+    }
+}
+
 pub struct StatsAllocator<T: Allocator> {
     inner: T,
 

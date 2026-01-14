@@ -1,6 +1,5 @@
 use tests_api::TheAlloc;
 
-#[allow(dead_code)] // TODO
 pub trait DoubleLinkedList<'x, T> {
     type NodeRef: Clone + PartialEq + std::fmt::Debug;
 

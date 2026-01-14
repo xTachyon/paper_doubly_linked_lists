@@ -62,9 +62,8 @@ struct Element<T> {
 pub struct Implementation<'x, T> {
     data: Vec<Option<Element<T>>, &'x TheAlloc>,
     free_list: Vec<u32>,
-    // TODO: rename to first, last
-    head: Handle<T>,
-    tail: Handle<T>,
+    first: Handle<T>,
+    last: Handle<T>,
 }
 impl<'x, T> DoubleLinkedList<'x, T> for Implementation<'x, T> {
     type NodeRef = Handle<T>;
@@ -73,8 +72,8 @@ impl<'x, T> DoubleLinkedList<'x, T> for Implementation<'x, T> {
         Self {
             data: Vec::with_capacity_in(capacity, alloc),
             free_list: Vec::with_capacity(32),
-            head: Handle::INVALID,
-            tail: Handle::INVALID,
+            first: Handle::INVALID,
+            last: Handle::INVALID,
         }
     }
 
@@ -82,12 +81,15 @@ impl<'x, T> DoubleLinkedList<'x, T> for Implementation<'x, T> {
         if self.data.is_empty() {
             return self.add_first_element(value);
         } else {
+            if !node.is_valid() {
+                panic!("insert_after called with node not in list");
+            }
             let new_node = self.allocate(value);
             let cnode_next = self.data[node.index as usize].as_ref().unwrap().next;
             self.link(node, new_node);
             self.link(new_node, cnode_next);
-            if (node.unique_id == self.tail.unique_id) && (node.index == self.tail.index) {
-                self.tail = new_node;
+            if (node.unique_id == self.last.unique_id) && (node.index == self.last.index) {
+                self.last = new_node;
             }
             new_node
         }
@@ -102,12 +104,12 @@ impl<'x, T> DoubleLinkedList<'x, T> for Implementation<'x, T> {
                 let cnode_prec = self.data[node.index as usize].as_ref().unwrap().prec;
                 self.link(new_node, node);
                 self.link(cnode_prec, new_node);
-                if (node.unique_id == self.head.unique_id) && (node.index == self.head.index) {
-                    self.head = new_node;
+                if (node.unique_id == self.first.unique_id) && (node.index == self.first.index) {
+                    self.first = new_node;
                 }
                 new_node
             } else {
-                Handle::INVALID
+                panic!("insert_before called with node not in list");
             }
         }
     }
@@ -117,8 +119,8 @@ impl<'x, T> DoubleLinkedList<'x, T> for Implementation<'x, T> {
             return self.add_first_element(value);
         } else {
             let node = self.allocate(value);
-            self.link(self.tail, node);
-            self.tail = node;
+            self.link(self.last, node);
+            self.last = node;
             node
         }
     }
@@ -128,8 +130,8 @@ impl<'x, T> DoubleLinkedList<'x, T> for Implementation<'x, T> {
             return self.add_first_element(value);
         } else {
             let node = self.allocate(value);
-            self.link(node, self.head);
-            self.head = node;
+            self.link(node, self.first);
+            self.first = node;
             node
         }
     }
@@ -142,17 +144,20 @@ impl<'x, T> DoubleLinkedList<'x, T> for Implementation<'x, T> {
         let p;
         let n;
         if let Some(elem) = self.data[node.index as usize].as_ref() {
+            if elem.unique_id != node.unique_id {
+                return;
+            }
             p = elem.prec;
             n = elem.next;
         } else {
             return;
         }
         self.link(p, n);
-        if (node.index == self.head.index) && (node.unique_id == self.head.unique_id) {
-            self.head = n;
+        if (node.index == self.first.index) && (node.unique_id == self.first.unique_id) {
+            self.first = n;
         }
-        if (node.index == self.tail.index) && (node.unique_id == self.tail.unique_id) {
-            self.tail = p;
+        if (node.index == self.last.index) && (node.unique_id == self.last.unique_id) {
+            self.last = p;
         }
         self.data[node.index as usize] = None;
         self.free_list.push(node.index);
@@ -181,15 +186,15 @@ impl<'x, T> DoubleLinkedList<'x, T> for Implementation<'x, T> {
     }
 
     fn first(&self) -> Option<Self::NodeRef> {
-        if self.head.is_valid() {
-            return Some(self.head);
+        if self.first.is_valid() {
+            return Some(self.first);
         }
         None
     }
 
     fn last(&self) -> Option<Self::NodeRef> {
-        if self.tail.is_valid() {
-            return Some(self.tail);
+        if self.last.is_valid() {
+            return Some(self.last);
         }
         None
     }
@@ -257,8 +262,8 @@ impl<'x, T> Implementation<'x, T> {
             value,
             unique_id: h.unique_id,
         }));
-        self.head = h;
-        self.tail = h;
+        self.first = h;
+        self.last = h;
         h
     }
     fn element(&self, handle: Handle<T>) -> Option<&Element<T>> {

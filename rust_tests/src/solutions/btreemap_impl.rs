@@ -11,13 +11,13 @@ struct Node<T> {
 
 pub struct Implementation<'x, T> {
     nodes: BTreeMap<usize, Node<T>, &'x TheAlloc>,
-    head: Option<usize>,
-    tail: Option<usize>,
+    first: Option<usize>,
+    last: Option<usize>,
     key_index: usize,
 }
 
 impl<'x, T> Implementation<'x, T> {
-    fn allocate_node(&mut self, value: T) -> usize {
+    fn allocate(&mut self, value: T) -> usize {
         let key = self.key_index;
         self.key_index += 1;
         self.nodes.insert(
@@ -39,23 +39,23 @@ impl<'x, T> DoubleLinkedList<'x, T> for Implementation<'x, T> {
     fn new(alloc: &'x TheAlloc, _capacity: usize) -> Self {
         Implementation {
             nodes: BTreeMap::new_in(alloc),
-            head: None,
-            tail: None,
+            first: None,
+            last: None,
             key_index: 0,
         }
     }
 
     fn insert_after(&mut self, node: Self::NodeRef, value: T) -> Self::NodeRef {
         if !self.nodes.contains_key(&node) {
-            return usize::MAX;
+            panic!("insert_after called with node not in list");
         }
 
         let node_next = self.nodes.get_mut(&node).unwrap().next;
-        let new_node = self.allocate_node(value);
+        let new_node = self.allocate(value);
         if let Some(next) = node_next {
             self.nodes.get_mut(&next).unwrap().prev = Some(new_node);
         } else {
-            self.tail = Some(new_node);
+            self.last = Some(new_node);
         }
         self.nodes.get_mut(&new_node).unwrap().prev = Some(node);
         self.nodes.get_mut(&new_node).unwrap().next = node_next;
@@ -66,14 +66,14 @@ impl<'x, T> DoubleLinkedList<'x, T> for Implementation<'x, T> {
 
     fn insert_before(&mut self, node: Self::NodeRef, value: T) -> Self::NodeRef {
         if !self.nodes.contains_key(&node) {
-            return usize::MAX;
+            panic!("insert_before called with node not in list");
         }
         let node_prev = self.nodes.get_mut(&node).unwrap().prev;
-        let new_node = self.allocate_node(value);
+        let new_node = self.allocate(value);
         if let Some(prev) = node_prev {
             self.nodes.get_mut(&prev).unwrap().next = Some(new_node);
         } else {
-            self.head = Some(new_node);
+            self.first = Some(new_node);
         }
         self.nodes.get_mut(&new_node).unwrap().next = Some(node);
         self.nodes.get_mut(&new_node).unwrap().prev = node_prev;
@@ -83,27 +83,27 @@ impl<'x, T> DoubleLinkedList<'x, T> for Implementation<'x, T> {
     }
 
     fn push_back(&mut self, value: T) -> Self::NodeRef {
-        let new_node = self.allocate_node(value);
-        if let Some(tail) = self.tail {
-            self.nodes.get_mut(&tail).unwrap().next = Some(new_node);
-            self.nodes.get_mut(&new_node).unwrap().prev = Some(tail);
+        let new_node = self.allocate(value);
+        if let Some(last_node) = self.last {
+            self.nodes.get_mut(&last_node).unwrap().next = Some(new_node);
+            self.nodes.get_mut(&new_node).unwrap().prev = Some(last_node);
         } else {
-            self.head = Some(new_node);
+            self.first = Some(new_node);
         }
-        self.tail = Some(new_node);
+        self.last = Some(new_node);
 
         new_node
     }
 
     fn push_front(&mut self, value: T) -> Self::NodeRef {
-        let new_node = self.allocate_node(value);
-        if let Some(head) = self.head {
-            self.nodes.get_mut(&head).unwrap().prev = Some(new_node);
-            self.nodes.get_mut(&new_node).unwrap().next = Some(head);
+        let new_node = self.allocate(value);
+        if let Some(first_node) = self.first {
+            self.nodes.get_mut(&first_node).unwrap().prev = Some(new_node);
+            self.nodes.get_mut(&new_node).unwrap().next = Some(first_node);
         } else {
-            self.tail = Some(new_node);
+            self.last = Some(new_node);
         }
-        self.head = Some(new_node);
+        self.first = Some(new_node);
 
         new_node
     }
@@ -113,13 +113,13 @@ impl<'x, T> DoubleLinkedList<'x, T> for Implementation<'x, T> {
             if let Some(prev) = node_ref.prev {
                 self.nodes.get_mut(&prev).unwrap().next = node_ref.next;
             } else {
-                self.head = node_ref.next;
+                self.first = node_ref.next;
             }
 
             if let Some(next) = node_ref.next {
                 self.nodes.get_mut(&next).unwrap().prev = node_ref.prev;
             } else {
-                self.tail = node_ref.prev;
+                self.last = node_ref.prev;
             }
         }
     }
@@ -133,11 +133,11 @@ impl<'x, T> DoubleLinkedList<'x, T> for Implementation<'x, T> {
     }
 
     fn first(&self) -> Option<Self::NodeRef> {
-        self.head
+        self.first
     }
 
     fn last(&self) -> Option<Self::NodeRef> {
-        self.tail
+        self.last
     }
 
     fn value(&self, node: Self::NodeRef) -> Option<&T> {
