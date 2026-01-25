@@ -1,7 +1,6 @@
 #![allow(internal_features)]
 #![allow(incomplete_features)]
 #![allow(unexpected_cfgs)]
-
 #![feature(allocator_api)]
 #![feature(rustc_attrs)]
 #![feature(dropck_eyepatch)]

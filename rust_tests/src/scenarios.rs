@@ -1,4 +1,9 @@
-use std::{array, hint::black_box, marker::PhantomData};
+use std::{
+    array,
+    hint::black_box,
+    marker::PhantomData,
+    panic::{catch_unwind, AssertUnwindSafe},
+};
 use tests_api::TheAlloc;
 
 use crate::solutions::double_linked_list::DoubleLinkedList;
@@ -254,7 +259,6 @@ impl<'x, L: DoubleLinkedList<'x, u64>> Scenario<'x> for Order<'x, L> {
 
 // ----------------------------------------------------------------------------
 
-
 pub struct SearchMiddle<L> {
     list: L,
     iterations: u64,
@@ -438,7 +442,6 @@ impl<'x, L: DoubleLinkedList<'x, String>> Scenario<'x> for FindString<L> {
     }
 }
 
-
 // ----------------------------------------------------------------------------
 
 pub struct MutateInPlace<L> {
@@ -505,10 +508,8 @@ impl<'x, L: DoubleLinkedList<'x, u64>> Scenario<'x> for UseAfterDelete<'x, L> {
         unsafe { list.delete(node.clone()) };
         // UB incoming
         let value = black_box(list.value(node.clone()));
-        if let Some(v) = value {
-            if *v == 0xDA {
-                panic!("read used after free value");
-            }
+        if value.is_some() {
+            panic!("read used after free value");
         }
     }
 }
@@ -531,16 +532,13 @@ impl<'x, L: DoubleLinkedList<'x, u64>> Scenario<'x> for UseAfterDeleteAndReinser
 
     fn run(self) {
         let mut list = L::new(self.init.alloc, 2);
-
         let node = list.push_front(0xDA);
         unsafe { list.delete(node.clone()) };
         list.push_front(0xDD);
         // UB incoming
         let value = list.value(node.clone());
-        if let Some(v) = value {
-            if *v == 0xDD {
-                panic!("read used after reinsert with old node");
-            }
+        if value.is_some() {
+            panic!("read used after reinsert with old node");
         }
     }
 }
@@ -567,6 +565,10 @@ impl<'x, L: DoubleLinkedList<'x, u64>> Scenario<'x> for DoubleFree<'x, L> {
         list.insert_after(node.clone(), 0xDB);
         list.insert_before(node.clone(), 0xDC);
         unsafe { list.delete(node.clone()) };
-        unsafe { list.delete(node.clone()) };
+
+        let second = catch_unwind(AssertUnwindSafe(|| unsafe { list.delete(node.clone()) }));
+        if second.is_ok() {
+            panic!("double free did not panic");
+        }
     }
 }

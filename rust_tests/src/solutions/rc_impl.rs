@@ -163,6 +163,8 @@ impl<'x, T: Clone + Debug> DoubleLinkedList<'x, T> for Implementation<T> {
             } else {
                 self.last = node_borrow.prev.clone().and_then(|p| p.0.upgrade());
             }
+        } else {
+            panic!("delete called with node not in list");
         }
     }
 

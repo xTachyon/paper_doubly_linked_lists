@@ -145,12 +145,12 @@ impl<'x, T> DoubleLinkedList<'x, T> for Implementation<'x, T> {
         let n;
         if let Some(elem) = self.data[node.index as usize].as_ref() {
             if elem.unique_id != node.unique_id {
-                return;
+                panic!("delete called with node not in list");
             }
             p = elem.prec;
             n = elem.next;
         } else {
-            return;
+            panic!("delete called with node not in list");
         }
         self.link(p, n);
         if (node.index == self.first.index) && (node.unique_id == self.first.unique_id) {
@@ -231,8 +231,7 @@ impl<'x, T> Implementation<'x, T> {
                 value,
                 unique_id: h.unique_id,
             });
-        }
-        else {
+        } else {
             self.data.push(Some(Element {
                 next: Handle::INVALID,
                 prec: Handle::INVALID,

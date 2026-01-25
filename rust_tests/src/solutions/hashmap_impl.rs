@@ -1,6 +1,6 @@
 use super::DoubleLinkedList;
-use std::fmt::Debug;
 use hashbrown::{hash_map::DefaultHashBuilder, HashMap};
+use std::fmt::Debug;
 use tests_api::TheAlloc;
 
 #[derive(Debug)]
@@ -122,6 +122,8 @@ impl<'x, T> DoubleLinkedList<'x, T> for Implementation<T> {
             } else {
                 self.last = node_ref.prev;
             }
+        } else {
+            panic!("delete called with node not in list");
         }
     }
 

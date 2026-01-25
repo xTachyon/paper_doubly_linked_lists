@@ -121,6 +121,8 @@ impl<'x, T> DoubleLinkedList<'x, T> for Implementation<'x, T> {
             } else {
                 self.last = node_ref.prev;
             }
+        } else {
+            panic!("delete called with node not in list");
         }
     }
 

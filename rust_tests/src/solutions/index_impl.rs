@@ -91,7 +91,7 @@ impl<'x, T> DoubleLinkedList<'x, T> for Implementation<'x, T> {
             p = elem.prec;
             n = elem.next;
         } else {
-            return;
+            panic!("delete called with node not in list");
         }
         self.link(p, n);
         if node == self.first {

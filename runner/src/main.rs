@@ -12,8 +12,11 @@ use std::{
     time::{Duration, Instant},
 };
 use tests_api::{
-    arena_alloc::ArenaAlloc, snalloc::SnAlloc, stats_alloc::{BoxedAllocator, StatsAllocator},
-    FnScenarioNew, FnScenarioRun, FnScenarioRunSafe, RawLoadResult, RawScenarioInit, RawScenarioKind,
+    arena_alloc::ArenaAlloc,
+    snalloc::SnAlloc,
+    stats_alloc::{BoxedAllocator, StatsAllocator},
+    FnScenarioNew, FnScenarioRun, FnScenarioRunSafe, RawLoadResult, RawScenarioInit,
+    RawScenarioKind,
 };
 
 struct ScenarioData {
@@ -117,7 +120,6 @@ unsafe fn load(
     specific_impl: Option<String>,
     specific_scenario: Option<String>,
 ) -> Result<()> {
-
     let raw_tests = rust_tests::load_tests();
     wrap_raw_tests(
         prefix,
@@ -158,10 +160,7 @@ fn bench<'x>(
     percent: u32,
     is_bench: bool,
 ) {
-    // println!("testing {}", test.name);
-
     for i in test.scenarios.iter() {
-        //println!("    scenario {}", i.name);
         let alloc = BoxedAllocator(allocator_kind.create(is_bench));
         let alloc = StatsAllocator::new(alloc);
 
@@ -194,8 +193,8 @@ fn bench<'x>(
 
 #[derive(Clone, Copy, PartialEq)]
 enum SafetyResult {
-    Pass,   // Panicked as expected (detected the error)
-    Fail,   // Did not panic (failed to detect the error)
+    Pass, // Panicked as expected (detected the error)
+    Fail, // Did not panic (failed to detect the error)
 }
 
 impl std::fmt::Display for SafetyResult {
@@ -233,13 +232,12 @@ fn run_safety_tests<'x>(
 
         let object = unsafe { (scenario.new)(init) };
 
-        // Use run_safe which catches panics internally and returns true if panicked
         let panicked = unsafe { (scenario.run_safe)(object) };
 
         let safety_result = if panicked {
-            SafetyResult::Pass   
+            SafetyResult::Fail
         } else {
-            SafetyResult::Fail   
+            SafetyResult::Pass
         };
 
         test_results.push((scenario.name, safety_result));
@@ -276,7 +274,6 @@ fn print_safety_results(results: &[SafetyTestResult]) {
         return;
     }
 
-    // Get scenario names from first result
     let scenario_names: Vec<&str> = results
         .first()
         .map(|r| r.results.iter().map(|(name, _)| *name).collect())
@@ -298,7 +295,6 @@ fn print_safety_results(results: &[SafetyTestResult]) {
         output.push(row);
     }
 
-    // Convert to the format expected by ascii_table
     let output_refs: Vec<Vec<&dyn Display>> = output
         .iter()
         .map(|row| row.iter().map(|s| s as &dyn Display).collect())
@@ -306,7 +302,6 @@ fn print_safety_results(results: &[SafetyTestResult]) {
 
     table.print(output_refs.iter().map(|r| r.as_slice()));
 
-    // Print summary
     println!();
     let total_tests = results.len() * scenario_names.len();
     let passed = results
@@ -340,7 +335,6 @@ struct Args {
     /// Run only a specific scenario
     #[arg(short, long)]
     scenario: Option<String>,
-
 }
 
 const DL_NAMES: (&str, &str) = if cfg!(target_os = "windows") {
@@ -372,13 +366,7 @@ impl AllocatorKind {
             AllocatorKind::Sn => Box::new(SnAlloc::new()),
         }
     }
-    // fn name(self) -> &'static str {
-    //     match self {
-    //         AllocatorKind::System => "system",
-    //         AllocatorKind::Arena => "arena",
-    //         AllocatorKind::Sn => "sn",
-    //     }
-    // }
+
     fn parse(name: &str, default: AllocatorKind) -> AllocatorKind {
         match name {
             "default" => default,
@@ -446,13 +434,6 @@ fn main_impl() -> Result<()> {
     if is_validation && allocator_kind != AllocatorKind::Arena {
         panic!("validation must be run with arena allocator");
     }
-    // println!(
-    //     "allocator: {}\npercent: {}\nbench: {}\nvalidation: {}",
-    //     allocator_kind.name(),
-    //     args.percent,
-    //     is_bench,
-    //     is_validation
-    // );
 
     let mut tests = Vec::with_capacity(16);
     unsafe {
@@ -467,30 +448,22 @@ fn main_impl() -> Result<()> {
             args.impl_name,
             args.scenario,
         )?;
-        // load("cpp", cpp_path, &mut tests)?;
-        //println!();
     };
 
-    // println!(
-    //     "no of impls: {}\nno of scenarios: {}\n",
-    //     tests.len(),
-    //     tests.first().unwrap().scenarios.len()
-    // );
-        // Run safety tests if requested
-        if is_safety {
-            let mut safety_results = Vec::new();
-            for test in tests.iter() {
-                run_safety_tests(test, &mut safety_results, allocator_kind, args.percent);
-            }
-            print_safety_results(&safety_results);
-            return Ok(());
+    if is_safety {
+        let mut safety_results = Vec::new();
+        for test in tests.iter() {
+            run_safety_tests(test, &mut safety_results, allocator_kind, args.percent);
         }
+        print_safety_results(&safety_results);
+        return Ok(());
+    }
 
     let mut results = IndexMap::new();
     for i in tests.iter() {
         bench(i, &mut results, allocator_kind, args.percent, is_bench);
     }
-    // println!();
+ 
 
     let mut output: Vec<[&dyn Display; 7]> = Vec::with_capacity(64);
     for tests in results.values_mut() {
@@ -525,8 +498,6 @@ fn main_impl() -> Result<()> {
 
     Ok(())
 }
-
-
 
 // fn main() -> Result<()> {
 //     let f = || {

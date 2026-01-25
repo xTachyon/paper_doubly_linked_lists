@@ -9,8 +9,8 @@ extern crate serde_test;
 use generational_arena::{Arena, Index};
 use serde::{Deserialize, Serialize};
 use serde_test::{assert_ser_tokens, Token};
-use std::iter::FromIterator;
 use std::fmt::Debug;
+use std::iter::FromIterator;
 
 #[test]
 fn deserialized_arena_holds_same_values_with_original_arena() {
@@ -142,7 +142,6 @@ fn fully_occupied_arena_can_be_serialized_and_deserialized() {
 
 #[test]
 fn arena_from_iter_can_be_serialized_and_deserialized_without_panic() {
-
     let mut vec = vec![0usize];
     let x = vec.drain(..);
     let mut arena_in = Arena::from_iter(x);

@@ -99,7 +99,8 @@ unsafe impl Allocator for ArenaAlloc {
     }
 
     unsafe fn deallocate(&self, _ptr: NonNull<u8>, layout: Layout) {
-        self.current_allocated
-            .set(self.current_allocated.get() - layout.size());
+        let current = self.current_allocated.get();
+        let size = layout.size();
+        self.current_allocated.set(current.saturating_sub(size));
     }
 }

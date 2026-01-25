@@ -12,13 +12,16 @@ use tests_api::{Handle, RawImpl, RawLoadResult, RawScenario, RawScenarioInit, Ra
 
 use crate::scenarios::ScenarioInit;
 
-const fn sc<'x, S: Scenario<'x> + 'static>(name: &'static str, kind: RawScenarioKind) -> RawScenario {
+const fn sc<'x, S: Scenario<'x> + 'static>(
+    name: &'static str,
+    kind: RawScenarioKind,
+) -> RawScenario {
     unsafe extern "C" fn new<'x, S: Scenario<'x> + 'static>(init: RawScenarioInit) -> Handle {
         let alloc = &**init.alloc;
         let init = ScenarioInit {
             alloc,
             percent: init.percent,
-            _p: PhantomData
+            _p: PhantomData,
         };
         let s = Box::new(S::new(init));
         let ptr = Box::into_raw(s);
@@ -82,7 +85,9 @@ macro_rules! list_impl {
             sb::<MutateInPlace<solutions::$name::Implementation<u64>>>("mutate_in_place"),
             // safety (should panic to pass)
             ss::<UseAfterDelete<solutions::$name::Implementation<u64>>>("use_after_delete"),
-            ss::<UseAfterDeleteAndReinsert<solutions::$name::Implementation<u64>>>("use_after_delete_reinsert"),
+            ss::<UseAfterDeleteAndReinsert<solutions::$name::Implementation<u64>>>(
+                "use_after_delete_reinsert",
+            ),
             ss::<DoubleFree<solutions::$name::Implementation<u64>>>("double_free"),
         ];
 

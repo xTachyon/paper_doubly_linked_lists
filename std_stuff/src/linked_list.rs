@@ -824,7 +824,7 @@ impl<T, A: Allocator> LinkedList<T, A> {
     pub fn back(&self) -> Option<&T> {
         unsafe { self.tail.as_ref().map(|node| &node.as_ref().element) }
     }
-    
+
     #[inline]
     pub fn back_raw(&self) -> Option<NonNull<Node<T>>> {
         self.tail.as_ref().map(|node| *node)
@@ -874,7 +874,7 @@ impl<T, A: Allocator> LinkedList<T, A> {
     /// dl.push_front(1);
     /// assert_eq!(dl.front().unwrap(), &1);
     /// ```
-    pub fn push_front(&mut self, elt: T) -> NonNull<Node<T>>  {
+    pub fn push_front(&mut self, elt: T) -> NonNull<Node<T>> {
         let node = Box::new_in(Node::new(elt), &self.alloc);
         let node_ptr = NonNull::from(Box::leak(node));
         // SAFETY: node_ptr is a unique pointer to a node we boxed with self.alloc and leaked

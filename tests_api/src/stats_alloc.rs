@@ -81,8 +81,9 @@ unsafe impl<T: Allocator> Allocator for StatsAllocator<T> {
     }
 
     unsafe fn deallocate(&self, ptr: NonNull<u8>, layout: Layout) {
-        self.current_allocated
-            .set(self.current_allocated.get() - layout.size());
+        let current = self.current_allocated.get();
+        let size = layout.size();
+        self.current_allocated.set(current.saturating_sub(size));
 
         calc_time(&self.time, || self.inner.deallocate(ptr, layout))
     }

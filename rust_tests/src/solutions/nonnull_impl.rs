@@ -3,7 +3,6 @@ use tests_api::TheAlloc;
 use super::DoubleLinkedList;
 use std::{fmt::Debug, ptr::NonNull};
 
-
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Node<T> {
     value: T,

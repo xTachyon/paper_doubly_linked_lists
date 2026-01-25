@@ -1,4 +1,3 @@
-
 use slab::Slab;
 use tests_api::TheAlloc;
 

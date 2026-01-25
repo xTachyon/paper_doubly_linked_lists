@@ -1,6 +1,5 @@
 #![allow(unexpected_cfgs)]
 #![feature(allocator_api)]
-
 #![no_std]
 #![warn(
     missing_debug_implementations,
