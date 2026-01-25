@@ -61,9 +61,9 @@ struct Element<T> {
 }
 pub struct Implementation<'x, T> {
     data: Vec<Option<Element<T>>, &'x TheAlloc>,
-    // TODO: rename to first, last
-    head: Handle<T>,
-    tail: Handle<T>,
+    free_list: Vec<u32>,
+    first: Handle<T>,
+    last: Handle<T>,
 }
 impl<'x, T> DoubleLinkedList<'x, T> for Implementation<'x, T> {
     type NodeRef = Handle<T>;
@@ -71,21 +71,25 @@ impl<'x, T> DoubleLinkedList<'x, T> for Implementation<'x, T> {
     fn new(alloc: &'x TheAlloc, capacity: usize) -> Self {
         Self {
             data: Vec::with_capacity_in(capacity, alloc),
-            head: Handle::INVALID,
-            tail: Handle::INVALID,
+            free_list: Vec::with_capacity(32),
+            first: Handle::INVALID,
+            last: Handle::INVALID,
         }
     }
 
     fn insert_after(&mut self, node: Self::NodeRef, value: T) -> Self::NodeRef {
         if self.data.is_empty() {
-            return self.add_first_element(value);
+            self.add_first_element(value)
         } else {
+            if !node.is_valid() {
+                panic!("insert_after called with node not in list");
+            }
             let new_node = self.allocate(value);
             let cnode_next = self.data[node.index as usize].as_ref().unwrap().next;
             self.link(node, new_node);
             self.link(new_node, cnode_next);
-            if (node.unique_id == self.tail.unique_id) && (node.index == self.tail.index) {
-                self.tail = new_node;
+            if (node.unique_id == self.last.unique_id) && (node.index == self.last.index) {
+                self.last = new_node;
             }
             new_node
         }
@@ -93,41 +97,39 @@ impl<'x, T> DoubleLinkedList<'x, T> for Implementation<'x, T> {
 
     fn insert_before(&mut self, node: Self::NodeRef, value: T) -> Self::NodeRef {
         if self.data.is_empty() {
-            return self.add_first_element(value);
-        } else {
-            if node.is_valid() {
-                let new_node = self.allocate(value);
-                let cnode_prec = self.data[node.index as usize].as_ref().unwrap().prec;
-                self.link(new_node, node);
-                self.link(cnode_prec, new_node);
-                if (node.unique_id == self.head.unique_id) && (node.index == self.head.index) {
-                    self.head = new_node;
-                }
-                new_node
-            } else {
-                Handle::INVALID
+            self.add_first_element(value)
+        } else if node.is_valid() {
+            let new_node = self.allocate(value);
+            let cnode_prec = self.data[node.index as usize].as_ref().unwrap().prec;
+            self.link(new_node, node);
+            self.link(cnode_prec, new_node);
+            if (node.unique_id == self.first.unique_id) && (node.index == self.first.index) {
+                self.first = new_node;
             }
+            new_node
+        } else {
+            panic!("insert_before called with node not in list");
         }
     }
 
     fn push_back(&mut self, value: T) -> Self::NodeRef {
         if self.data.is_empty() {
-            return self.add_first_element(value);
+            self.add_first_element(value)
         } else {
             let node = self.allocate(value);
-            self.link(self.tail, node);
-            self.tail = node;
+            self.link(self.last, node);
+            self.last = node;
             node
         }
     }
 
     fn push_front(&mut self, value: T) -> Self::NodeRef {
         if self.data.is_empty() {
-            return self.add_first_element(value);
+            self.add_first_element(value)
         } else {
             let node = self.allocate(value);
-            self.link(node, self.head);
-            self.head = node;
+            self.link(node, self.first);
+            self.first = node;
             node
         }
     }
@@ -140,19 +142,23 @@ impl<'x, T> DoubleLinkedList<'x, T> for Implementation<'x, T> {
         let p;
         let n;
         if let Some(elem) = self.data[node.index as usize].as_ref() {
+            if elem.unique_id != node.unique_id {
+                panic!("delete called with node not in list");
+            }
             p = elem.prec;
             n = elem.next;
         } else {
-            return;
+            panic!("delete called with node not in list");
         }
         self.link(p, n);
-        if (node.index == self.head.index) && (node.unique_id == self.head.unique_id) {
-            self.head = n;
+        if (node.index == self.first.index) && (node.unique_id == self.first.unique_id) {
+            self.first = n;
         }
-        if (node.index == self.tail.index) && (node.unique_id == self.tail.unique_id) {
-            self.tail = p;
+        if (node.index == self.last.index) && (node.unique_id == self.last.unique_id) {
+            self.last = p;
         }
         self.data[node.index as usize] = None;
+        self.free_list.push(node.index);
     }
 
     fn next(&self, node: Self::NodeRef) -> Option<Self::NodeRef> {
@@ -178,15 +184,15 @@ impl<'x, T> DoubleLinkedList<'x, T> for Implementation<'x, T> {
     }
 
     fn first(&self) -> Option<Self::NodeRef> {
-        if self.head.is_valid() {
-            return Some(self.head);
+        if self.first.is_valid() {
+            return Some(self.first);
         }
         None
     }
 
     fn last(&self) -> Option<Self::NodeRef> {
-        if self.tail.is_valid() {
-            return Some(self.tail);
+        if self.last.is_valid() {
+            return Some(self.last);
         }
         None
     }
@@ -208,14 +214,29 @@ impl<'x, T> DoubleLinkedList<'x, T> for Implementation<'x, T> {
 
 impl<'x, T> Implementation<'x, T> {
     fn allocate(&mut self, value: T) -> Handle<T> {
-        let idx = self.data.len();
+        let allocated = self.data.len();
+        let idx = self
+            .free_list
+            .pop()
+            .map(|f| f as usize)
+            .unwrap_or(allocated);
+
         let h = Handle::new(idx as u32);
-        self.data.push(Some(Element {
-            next: Handle::INVALID,
-            prec: Handle::INVALID,
-            value,
-            unique_id: h.unique_id,
-        }));
+        if idx < allocated {
+            self.data[idx] = Some(Element {
+                next: Handle::INVALID,
+                prec: Handle::INVALID,
+                value,
+                unique_id: h.unique_id,
+            });
+        } else {
+            self.data.push(Some(Element {
+                next: Handle::INVALID,
+                prec: Handle::INVALID,
+                value,
+                unique_id: h.unique_id,
+            }));
+        }
         h
     }
     fn link(&mut self, n1: Handle<T>, n2: Handle<T>) {
@@ -238,8 +259,8 @@ impl<'x, T> Implementation<'x, T> {
             value,
             unique_id: h.unique_id,
         }));
-        self.head = h;
-        self.tail = h;
+        self.first = h;
+        self.last = h;
         h
     }
     fn element(&self, handle: Handle<T>) -> Option<&Element<T>> {

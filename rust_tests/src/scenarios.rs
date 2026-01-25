@@ -1,4 +1,9 @@
-use std::{array, hint::black_box, marker::PhantomData};
+use std::{
+    array,
+    hint::black_box,
+    marker::PhantomData,
+    panic::{catch_unwind, AssertUnwindSafe},
+};
 use tests_api::TheAlloc;
 
 use crate::solutions::double_linked_list::DoubleLinkedList;
@@ -254,70 +259,6 @@ impl<'x, L: DoubleLinkedList<'x, u64>> Scenario<'x> for Order<'x, L> {
 
 // ----------------------------------------------------------------------------
 
-pub struct UseAfterDelete<'x, L> {
-    init: ScenarioInit<'x>,
-    _p: PhantomData<L>,
-}
-impl<'x, L: DoubleLinkedList<'x, u64>> Scenario<'x> for UseAfterDelete<'x, L> {
-    type Impl = L;
-
-    fn new(init: ScenarioInit<'x>) -> Self {
-        Self {
-            init,
-            _p: PhantomData,
-        }
-    }
-
-    fn run(self) {
-        let mut list = L::new(self.init.alloc, 2);
-
-        let node = list.push_front(0xDA);
-        unsafe { list.delete(node.clone()) };
-        // UB incoming
-        let value = black_box(list.value(node.clone()));
-        if let Some(v) = value {
-            if *v == 0xDA {
-                panic!("read used after free value");
-            }
-        }
-    }
-}
-
-// ----------------------------------------------------------------------------
-
-// TODO: add to validation scenarios
-pub struct UseAfterDeleteAndReinsert<'x, L> {
-    init: ScenarioInit<'x>,
-    _p: PhantomData<L>,
-}
-impl<'x, L: DoubleLinkedList<'x, u64>> Scenario<'x> for UseAfterDeleteAndReinsert<'x, L> {
-    type Impl = L;
-
-    fn new(init: ScenarioInit<'x>) -> Self {
-        Self {
-            init,
-            _p: PhantomData,
-        }
-    }
-
-    fn run(self) {
-        let mut list = L::new(self.init.alloc, 2);
-
-        let node = list.push_front(0xDA);
-        unsafe { list.delete(node.clone()) };
-        list.push_front(0xDD);
-        // UB incoming
-        let value = list.value(node.clone());
-        if let Some(v) = value {
-            if *v == 0xDD {
-                panic!("read used after reinsert with old node");
-            }
-        }
-    }
-}
-
-// ----------------------------------------------------------------------------
-
 pub struct SearchMiddle<L> {
     list: L,
     iterations: u64,
@@ -501,3 +442,133 @@ impl<'x, L: DoubleLinkedList<'x, String>> Scenario<'x> for FindString<L> {
     }
 }
 
+// ----------------------------------------------------------------------------
+
+pub struct MutateInPlace<L> {
+    list: L,
+    iterations: usize,
+}
+impl<'x, L: DoubleLinkedList<'x, u64>> Scenario<'x> for MutateInPlace<L> {
+    type Impl = L;
+
+    fn new(init: ScenarioInit<'x>) -> Self {
+        let iterations = init.percent_usize(1_000_000);
+        let mut list = L::new(init.alloc, iterations);
+        for i in 0..iterations {
+            list.push_back(i as u64);
+        }
+        Self { list, iterations }
+    }
+
+    fn run(mut self) {
+        let mut current = self.list.first();
+        while let Some(node) = current {
+            if let Some(value) = self.list.value_mut(node.clone()) {
+                *value = value.wrapping_mul(2).wrapping_add(1);
+            }
+            current = self.list.next(node);
+        }
+
+        // Verify: check that mutations happened
+        let mut sum = 0u64;
+        let mut current = self.list.first();
+        while let Some(node) = current {
+            if let Some(value) = self.list.value(node.clone()) {
+                sum = sum.wrapping_add(*value);
+            }
+            current = self.list.next(node);
+        }
+
+        // Expected: sum of (2*i + 1) for i in 0..iterations = 2*(0+1+...+(n-1)) + n = n*(n-1) + n = n*n
+        let n = self.iterations as u64;
+        assert_eq!(sum, n.wrapping_mul(n));
+    }
+}
+
+// ----------------------------------------------------------------------------
+
+pub struct UseAfterDelete<'x, L> {
+    init: ScenarioInit<'x>,
+    _p: PhantomData<L>,
+}
+impl<'x, L: DoubleLinkedList<'x, u64>> Scenario<'x> for UseAfterDelete<'x, L> {
+    type Impl = L;
+
+    fn new(init: ScenarioInit<'x>) -> Self {
+        Self {
+            init,
+            _p: PhantomData,
+        }
+    }
+
+    fn run(self) {
+        let mut list = L::new(self.init.alloc, 2);
+
+        let node = list.push_front(0xDA);
+        unsafe { list.delete(node.clone()) };
+        // UB incoming
+        let value = black_box(list.value(node.clone()));
+        if value.is_some() {
+            panic!("read used after free value");
+        }
+    }
+}
+
+// ----------------------------------------------------------------------------
+
+pub struct UseAfterDeleteAndReinsert<'x, L> {
+    init: ScenarioInit<'x>,
+    _p: PhantomData<L>,
+}
+impl<'x, L: DoubleLinkedList<'x, u64>> Scenario<'x> for UseAfterDeleteAndReinsert<'x, L> {
+    type Impl = L;
+
+    fn new(init: ScenarioInit<'x>) -> Self {
+        Self {
+            init,
+            _p: PhantomData,
+        }
+    }
+
+    fn run(self) {
+        let mut list = L::new(self.init.alloc, 2);
+        let node = list.push_front(0xDA);
+        unsafe { list.delete(node.clone()) };
+        list.push_front(0xDD);
+        // UB incoming
+        let value = list.value(node.clone());
+        if value.is_some() {
+            panic!("read used after reinsert with old node");
+        }
+    }
+}
+
+// ----------------------------------------------------------------------------
+
+pub struct DoubleFree<'x, L> {
+    init: ScenarioInit<'x>,
+    _p: PhantomData<L>,
+}
+impl<'x, L: DoubleLinkedList<'x, u64>> Scenario<'x> for DoubleFree<'x, L> {
+    type Impl = L;
+
+    fn new(init: ScenarioInit<'x>) -> Self {
+        Self {
+            init,
+            _p: PhantomData,
+        }
+    }
+
+    fn run(self) {
+        let mut list = L::new(self.init.alloc, 3_usize);
+        let node = list.push_back(0xDA);
+        list.insert_after(node.clone(), 0xDB);
+        list.insert_before(node.clone(), 0xDC);
+        unsafe { list.delete(node.clone()) };
+
+        let second = catch_unwind(AssertUnwindSafe(|| unsafe { list.delete(node.clone()) }));
+        if second.is_ok() {
+            panic!("double free did not panic");
+        }
+    }
+}

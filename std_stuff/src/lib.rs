@@ -1,8 +1,6 @@
 #![allow(internal_features)]
 #![allow(incomplete_features)]
 #![allow(unexpected_cfgs)]
-
-#![feature(error_in_core)]
 #![feature(allocator_api)]
 #![feature(rustc_attrs)]
 #![feature(dropck_eyepatch)]

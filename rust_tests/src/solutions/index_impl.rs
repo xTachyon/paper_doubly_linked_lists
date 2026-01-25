@@ -9,9 +9,8 @@ struct Element<T> {
 pub struct Implementation<'x, T> {
     data: Vec<Option<Element<T>>, &'x TheAlloc>,
     free_list: Vec<u32>,
-    // TODO: rename to first, last
-    head: u32,
-    tail: u32,
+    first: u32,
+    last: u32,
 }
 impl<'x, T> DoubleLinkedList<'x, T> for Implementation<'x, T> {
     type NodeRef = u32;
@@ -20,61 +19,63 @@ impl<'x, T> DoubleLinkedList<'x, T> for Implementation<'x, T> {
         Self {
             data: Vec::with_capacity_in(capacity, alloc),
             free_list: Vec::with_capacity(32),
-            head: u32::MAX,
-            tail: u32::MAX,
+            first: u32::MAX,
+            last: u32::MAX,
         }
     }
 
     fn insert_after(&mut self, node: Self::NodeRef, value: T) -> Self::NodeRef {
         if self.data.is_empty() {
-            return self.add_first_element(value);
-        } else {
+            self.add_first_element(value)
+        } else if node != u32::MAX {
             let new_node = self.allocate(value);
             let cnode_next = self.data[node as usize].as_ref().unwrap().next;
             self.link(node, new_node);
             self.link(new_node, cnode_next);
-            if node == self.tail {
-                self.tail = new_node;
+            if node == self.last {
+                self.last = new_node;
             }
             new_node
+        } else {
+            panic!("insert_after called with node not in list");
         }
     }
 
     fn insert_before(&mut self, node: Self::NodeRef, value: T) -> Self::NodeRef {
         if self.data.is_empty() {
-            return self.add_first_element(value);
+            self.add_first_element(value)
         } else if node != u32::MAX {
             let new_node = self.allocate(value);
             let cnode_prec = self.data[node as usize].as_ref().unwrap().prec;
             self.link(new_node, node);
             self.link(cnode_prec, new_node);
-            if node == self.head {
-                self.head = new_node;
+            if node == self.first {
+                self.first = new_node;
             }
             new_node
         } else {
-            u32::MAX
+            panic!("insert_before called with node not in list");
         }
     }
 
     fn push_back(&mut self, value: T) -> Self::NodeRef {
         if self.data.is_empty() {
-            return self.add_first_element(value);
+            self.add_first_element(value)
         } else {
             let node = self.allocate(value);
-            self.link(self.tail, node);
-            self.tail = node;
+            self.link(self.last, node);
+            self.last = node;
             node
         }
     }
 
     fn push_front(&mut self, value: T) -> Self::NodeRef {
         if self.data.is_empty() {
-            return self.add_first_element(value);
+            self.add_first_element(value)
         } else {
             let node = self.allocate(value);
-            self.link(node, self.head);
-            self.head = node;
+            self.link(node, self.first);
+            self.first = node;
             node
         }
     }
@@ -90,14 +91,14 @@ impl<'x, T> DoubleLinkedList<'x, T> for Implementation<'x, T> {
             p = elem.prec;
             n = elem.next;
         } else {
-            return;
+            panic!("delete called with node not in list");
         }
         self.link(p, n);
-        if node == self.head {
-            self.head = n;
+        if node == self.first {
+            self.first = n;
         }
-        if node == self.tail {
-            self.tail = p;
+        if node == self.last {
+            self.last = p;
         }
         self.data[node as usize] = None;
         self.free_list.push(node);
@@ -126,15 +127,15 @@ impl<'x, T> DoubleLinkedList<'x, T> for Implementation<'x, T> {
     }
 
     fn first(&self) -> Option<Self::NodeRef> {
-        if self.head != u32::MAX {
-            return Some(self.head);
+        if self.first != u32::MAX {
+            return Some(self.first);
         }
         None
     }
 
     fn last(&self) -> Option<Self::NodeRef> {
-        if self.tail != u32::MAX {
-            return Some(self.tail);
+        if self.last != u32::MAX {
+            return Some(self.last);
         }
         None
     }
@@ -195,8 +196,8 @@ impl<'x, T> Implementation<'x, T> {
             prec: u32::MAX,
             value,
         }));
-        self.head = 0;
-        self.tail = 0;
+        self.first = 0;
+        self.last = 0;
         0
     }
     fn element(&self, handle: u32) -> Option<&Element<T>> {

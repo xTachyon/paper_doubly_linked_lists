@@ -10,11 +10,18 @@ use std::{
 pub struct SnAlloc {
     ctx: *mut AllocCtx,
 }
+
+impl Default for SnAlloc {
+    fn default() -> Self {
+         Self::new()
+     }
+}
+
 impl SnAlloc {
     pub fn new() -> SnAlloc {
         let ctx = unsafe { sn_rust_inst_create() };
         assert!(!ctx.is_null());
-        SnAlloc { ctx: ctx }
+        SnAlloc { ctx }
     }
 
     fn alloc(&self, layout: Layout, zeroed: bool) -> Result<NonNull<[u8]>, AllocError> {

@@ -16,11 +16,14 @@ pub struct RawScenarioInit {
 
 pub type FnScenarioNew = unsafe extern "C" fn(init: RawScenarioInit) -> Handle;
 pub type FnScenarioRun = unsafe extern "C" fn(handle: Handle);
+/// Returns true if the scenario panicked (for safety tests, panic = pass)
+pub type FnScenarioRunSafe = unsafe extern "C" fn(handle: Handle) -> bool;
 
 #[repr(C)]
 pub enum RawScenarioKind {
     Bench,
     Validation,
+    Safety,
 }
 
 #[repr(C)]
@@ -30,6 +33,8 @@ pub struct RawScenario {
 
     pub new: FnScenarioNew,
     pub run: FnScenarioRun,
+    /// For safety tests: runs and returns true if panicked
+    pub run_safe: FnScenarioRunSafe,
 
     pub kind: RawScenarioKind,
 }

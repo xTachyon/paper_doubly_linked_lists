@@ -364,7 +364,7 @@ impl<T, A: Allocator> LinkedList<T, A> {
 
             // Fix the head ptr of the second part
             self.head = Some(split_node);
-            self.len = self.len - at;
+            self.len -= at;
 
             first_part
         } else {
@@ -618,7 +618,7 @@ impl<T, A: Allocator> LinkedList<T, A> {
 
     pub fn cursor_back(&self) -> Cursor<'_, T, A> {
         Cursor {
-            index: self.len.checked_sub(1).unwrap_or(0),
+            index: self.len.saturating_sub(1),
             current: self.tail,
             list: self,
         }
@@ -632,7 +632,7 @@ impl<T, A: Allocator> LinkedList<T, A> {
 
     pub fn cursor_back_mut(&mut self) -> CursorMut<'_, T, A> {
         CursorMut {
-            index: self.len.checked_sub(1).unwrap_or(0),
+            index: self.len.saturating_sub(1),
             current: self.tail,
             list: self,
         }
@@ -824,7 +824,7 @@ impl<T, A: Allocator> LinkedList<T, A> {
     pub fn back(&self) -> Option<&T> {
         unsafe { self.tail.as_ref().map(|node| &node.as_ref().element) }
     }
-    
+
     #[inline]
     pub fn back_raw(&self) -> Option<NonNull<Node<T>>> {
         self.tail.as_ref().map(|node| *node)
@@ -874,7 +874,7 @@ impl<T, A: Allocator> LinkedList<T, A> {
     /// dl.push_front(1);
     /// assert_eq!(dl.front().unwrap(), &1);
     /// ```
-    pub fn push_front(&mut self, elt: T) -> NonNull<Node<T>>  {
+    pub fn push_front(&mut self, elt: T) -> NonNull<Node<T>> {
         let node = Box::new_in(Node::new(elt), &self.alloc);
         let node_ptr = NonNull::from(Box::leak(node));
         // SAFETY: node_ptr is a unique pointer to a node we boxed with self.alloc and leaked
@@ -1468,7 +1468,7 @@ impl<'a, T, A: Allocator> Cursor<'a, T, A> {
             // No current. We're at the start of the list. Yield None and jump to the end.
             None => {
                 self.current = self.list.tail;
-                self.index = self.list.len().checked_sub(1).unwrap_or(0);
+                self.index = self.list.len().saturating_sub(1);
             }
             // Have a prev. Yield it and go to the previous element.
             Some(current) => unsafe {
@@ -1585,7 +1585,7 @@ impl<'a, T, A: Allocator> CursorMut<'a, T, A> {
             // No current. We're at the start of the list. Yield None and jump to the end.
             None => {
                 self.current = self.list.tail;
-                self.index = self.list.len().checked_sub(1).unwrap_or(0);
+                self.index = self.list.len().saturating_sub(1);
             }
             // Have a prev. Yield it and go to the previous element.
             Some(current) => unsafe {

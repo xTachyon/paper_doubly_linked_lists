@@ -33,7 +33,7 @@ stacker = "0.1.15"
 
 [profile.release]
 lto = "thin"
-panic = "abort"
+panic = "unwind"
 debug = true
 
 
