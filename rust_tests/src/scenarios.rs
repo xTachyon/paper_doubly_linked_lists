@@ -560,7 +560,7 @@ impl<'x, L: DoubleLinkedList<'x, u64>> Scenario<'x> for DoubleFree<'x, L> {
     }
 
     fn run(self) {
-        let mut list = L::new(self.init.alloc, 3 as usize);
+        let mut list = L::new(self.init.alloc, 3_usize);
         let node = list.push_back(0xDA);
         list.insert_after(node.clone(), 0xDB);
         list.insert_before(node.clone(), 0xDC);

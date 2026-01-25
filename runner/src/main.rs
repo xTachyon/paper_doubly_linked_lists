@@ -178,7 +178,7 @@ fn bench<'x>(
         let alloc_time = alloc.time();
         results
             .entry(i.name)
-            .or_insert(Vec::new())
+            .or_default()
             .push(TestResult {
                 scenario: i.name,
                 impl_name: &test.name,

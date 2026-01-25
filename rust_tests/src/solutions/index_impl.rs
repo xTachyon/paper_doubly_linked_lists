@@ -26,7 +26,7 @@ impl<'x, T> DoubleLinkedList<'x, T> for Implementation<'x, T> {
 
     fn insert_after(&mut self, node: Self::NodeRef, value: T) -> Self::NodeRef {
         if self.data.is_empty() {
-            return self.add_first_element(value);
+            self.add_first_element(value)
         } else if node != u32::MAX {
             let new_node = self.allocate(value);
             let cnode_next = self.data[node as usize].as_ref().unwrap().next;
@@ -43,7 +43,7 @@ impl<'x, T> DoubleLinkedList<'x, T> for Implementation<'x, T> {
 
     fn insert_before(&mut self, node: Self::NodeRef, value: T) -> Self::NodeRef {
         if self.data.is_empty() {
-            return self.add_first_element(value);
+            self.add_first_element(value)
         } else if node != u32::MAX {
             let new_node = self.allocate(value);
             let cnode_prec = self.data[node as usize].as_ref().unwrap().prec;
@@ -60,7 +60,7 @@ impl<'x, T> DoubleLinkedList<'x, T> for Implementation<'x, T> {
 
     fn push_back(&mut self, value: T) -> Self::NodeRef {
         if self.data.is_empty() {
-            return self.add_first_element(value);
+            self.add_first_element(value)
         } else {
             let node = self.allocate(value);
             self.link(self.last, node);
@@ -71,7 +71,7 @@ impl<'x, T> DoubleLinkedList<'x, T> for Implementation<'x, T> {
 
     fn push_front(&mut self, value: T) -> Self::NodeRef {
         if self.data.is_empty() {
-            return self.add_first_element(value);
+            self.add_first_element(value)
         } else {
             let node = self.allocate(value);
             self.link(node, self.first);

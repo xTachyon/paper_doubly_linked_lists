@@ -79,7 +79,7 @@ impl<'x, T> DoubleLinkedList<'x, T> for Implementation<'x, T> {
 
     fn insert_after(&mut self, node: Self::NodeRef, value: T) -> Self::NodeRef {
         if self.data.is_empty() {
-            return self.add_first_element(value);
+            self.add_first_element(value)
         } else {
             if !node.is_valid() {
                 panic!("insert_after called with node not in list");
@@ -97,26 +97,24 @@ impl<'x, T> DoubleLinkedList<'x, T> for Implementation<'x, T> {
 
     fn insert_before(&mut self, node: Self::NodeRef, value: T) -> Self::NodeRef {
         if self.data.is_empty() {
-            return self.add_first_element(value);
-        } else {
-            if node.is_valid() {
-                let new_node = self.allocate(value);
-                let cnode_prec = self.data[node.index as usize].as_ref().unwrap().prec;
-                self.link(new_node, node);
-                self.link(cnode_prec, new_node);
-                if (node.unique_id == self.first.unique_id) && (node.index == self.first.index) {
-                    self.first = new_node;
-                }
-                new_node
-            } else {
-                panic!("insert_before called with node not in list");
+            self.add_first_element(value)
+        } else if node.is_valid() {
+            let new_node = self.allocate(value);
+            let cnode_prec = self.data[node.index as usize].as_ref().unwrap().prec;
+            self.link(new_node, node);
+            self.link(cnode_prec, new_node);
+            if (node.unique_id == self.first.unique_id) && (node.index == self.first.index) {
+                self.first = new_node;
             }
+            new_node
+        } else {
+            panic!("insert_before called with node not in list");
         }
     }
 
     fn push_back(&mut self, value: T) -> Self::NodeRef {
         if self.data.is_empty() {
-            return self.add_first_element(value);
+            self.add_first_element(value)
         } else {
             let node = self.allocate(value);
             self.link(self.last, node);
@@ -127,7 +125,7 @@ impl<'x, T> DoubleLinkedList<'x, T> for Implementation<'x, T> {
 
     fn push_front(&mut self, value: T) -> Self::NodeRef {
         if self.data.is_empty() {
-            return self.add_first_element(value);
+            self.add_first_element(value)
         } else {
             let node = self.allocate(value);
             self.link(node, self.first);

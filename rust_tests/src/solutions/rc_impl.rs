@@ -198,7 +198,7 @@ impl<'x, T: Clone + Debug> DoubleLinkedList<'x, T> for Implementation<T> {
 
     fn value(&self, node: Self::NodeRef) -> Option<&T> {
         node.0.upgrade().map(|node_rc| {
-            let node_ref: &Node<T> = &*node_rc.borrow();
+            let node_ref: &Node<T> = &node_rc.borrow();
             let x = &node_ref.value as *const T;
             unsafe { &*x as &T }
         })
@@ -206,7 +206,7 @@ impl<'x, T: Clone + Debug> DoubleLinkedList<'x, T> for Implementation<T> {
 
     fn value_mut(&mut self, node: Self::NodeRef) -> Option<&mut T> {
         node.0.upgrade().map(|node_rc| {
-            let node_mut: &mut Node<T> = &mut *node_rc.borrow_mut();
+            let node_mut: &mut Node<T> = &mut node_rc.borrow_mut();
             let x = &mut node_mut.value as *mut T;
             unsafe { &mut *x as &mut T }
         })
