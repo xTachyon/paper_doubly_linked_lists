@@ -150,22 +150,24 @@ impl<'x, T: Clone + Debug> DoubleLinkedList<'x, T> for Implementation<T> {
     }
 
     unsafe fn delete(&mut self, node: Self::NodeRef) {
-        if let Some(node_rc) = node.0.upgrade() {
-            let node_borrow = node_rc.borrow();
-            if let Some(prev_node) = node_borrow.prev.clone().and_then(|p| p.0.upgrade()) {
-                prev_node.borrow_mut().next = node_borrow.next.clone();
-            } else {
-                self.first = node_borrow.next.clone();
-            }
-
-            if let Some(next_node) = node_borrow.next.clone() {
-                next_node.borrow_mut().prev = node_borrow.prev.clone();
-            } else {
-                self.last = node_borrow.prev.clone().and_then(|p| p.0.upgrade());
-            }
-        } else {
+        let Some(node_rc) = node.0.upgrade() else {
             panic!("delete called with node not in list");
+        };
+        let mut node_borrow = node_rc.borrow_mut();
+        if let Some(prev_node) = node_borrow.prev.clone().and_then(|p| p.0.upgrade()) {
+            prev_node.borrow_mut().next = node_borrow.next.clone();
+        } else {
+            self.first = node_borrow.next.clone();
         }
+
+        if let Some(next_node) = node_borrow.next.clone() {
+            next_node.borrow_mut().prev = node_borrow.prev.clone();
+        } else {
+            self.last = node_borrow.prev.clone().and_then(|p| p.0.upgrade());
+        }
+
+        // Clear next to prevent cascading drops in Node::drop
+        node_borrow.next = None;
     }
 
     fn next(&self, node: Self::NodeRef) -> Option<Self::NodeRef> {

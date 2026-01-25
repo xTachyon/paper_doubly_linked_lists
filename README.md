@@ -14,8 +14,8 @@ Use the workspace runner binary; it exposes all test parameters.
 - `-s, --scenario <name>`: run one scenario.
 
 ### Scenarios
-- Validation: `first`, `last`, `order`
-- Bench: `find_string`, `push_pages`, `iterate_pages`, `add_front_back`, `search_middle`, `sum`, `push_delete_one`, `push`, `fragmentation`, `mutate_in_place`
+- Validation: `first`, `last`, `order`, `mutate_in_place`
+- Bench: `find_string`, `push_pages`, `iterate_pages`, `add_front_back`, `search_middle`, `sum`, `push_delete_one`, `push`, `fragmentation`
 - Safety: `use_after_delete`, `use_after_delete_reinsert`, `double_free`
 
 ### Examples

@@ -82,7 +82,7 @@ macro_rules! list_impl {
             sb::<PushDeleteOneScenario<solutions::$name::Implementation<u64>>>("push_delete_one"),
             sb::<PushScenario<solutions::$name::Implementation<u64>>>("push"),
             sb::<Fragmentation<solutions::$name::Implementation<u64>>>("fragmentation"),
-            sb::<MutateInPlace<solutions::$name::Implementation<u64>>>("mutate_in_place"),
+            sv::<MutateInPlace<solutions::$name::Implementation<u64>>>("mutate_in_place"),
             // safety (should panic to pass)
             ss::<UseAfterDelete<solutions::$name::Implementation<u64>>>("use_after_delete"),
             ss::<UseAfterDeleteAndReinsert<solutions::$name::Implementation<u64>>>(
