@@ -73,20 +73,26 @@ macro_rules! list_impl {
             sv::<Last<solutions::$name::Implementation<u64>>>("last"),
             sv::<Last<solutions::$name::Implementation<u64>>>("order"),
             // bench
-            sb::<FindString<solutions::$name::Implementation<String>>>("find_string"),
-            sb::<PushPages<solutions::$name::Implementation<Page>>>("push_pages"),
-            sb::<IteratePages<solutions::$name::Implementation<Page>>>("iterate_pages"),
-            sb::<AddFrontBack<solutions::$name::Implementation<u64>>>("add_front_back"),
-            sb::<SearchMiddle<solutions::$name::Implementation<u64>>>("search_middle"),
-            sb::<SumScenario<solutions::$name::Implementation<u64>>>("sum"),
-            sb::<PushDeleteOneScenario<solutions::$name::Implementation<u64>>>("push_delete_one"),
-            sb::<PushScenario<solutions::$name::Implementation<u64>>>("push"),
-            sb::<Fragmentation<solutions::$name::Implementation<u64>>>("fragmentation"),
+            sb::<LinearSearchExpensiveComparison<solutions::$name::Implementation<String>>>(
+                "linear_search_exp",
+            ),
+            sb::<LargeNodeBidirectionalGrowth<solutions::$name::Implementation<Page>>>(
+                "large_node_growth",
+            ),
+            sb::<LargeNodeTraversal<solutions::$name::Implementation<Page>>>("large_node_traversal"),
+            sb::<BidirectionalGrowth<solutions::$name::Implementation<u64>>>("bidir_growth"),
+            sb::<LinearLookup<solutions::$name::Implementation<u64>>>("linear_lookup"),
+            sb::<FullTraversalScenario<solutions::$name::Implementation<u64>>>("full_traversal"),
+            sb::<AllocationReuseStressScenario<solutions::$name::Implementation<u64>>>(
+                "alloc_reuse",
+            ),
+            sb::<BulkAppendScenario<solutions::$name::Implementation<u64>>>("bulk_append"),
+            sb::<FragmentationStress<solutions::$name::Implementation<u64>>>("frag_stress"),
             sv::<MutateInPlace<solutions::$name::Implementation<u64>>>("mutate_in_place"),
             // safety (should panic to pass)
-            ss::<UseAfterDelete<solutions::$name::Implementation<u64>>>("use_after_delete"),
-            ss::<UseAfterDeleteAndReinsert<solutions::$name::Implementation<u64>>>(
-                "use_after_delete_reinsert",
+            ss::<UseAfterFree<solutions::$name::Implementation<u64>>>("use_after_free"),
+            ss::<UseAfterFreeAndReinsertion<solutions::$name::Implementation<u64>>>(
+                "use_after_free_reinsert",
             ),
             ss::<DoubleFree<solutions::$name::Implementation<u64>>>("double_free"),
         ];

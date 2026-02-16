@@ -33,11 +33,11 @@ pub trait Scenario<'x> {
 
 const ITERATIONS: u64 = 1_000_000;
 
-pub struct SumScenario<L> {
+pub struct FullTraversalScenario<L> {
     list: L,
     iterations: usize,
 }
-impl<'x, L: DoubleLinkedList<'x, u64>> Scenario<'x> for SumScenario<L> {
+impl<'x, L: DoubleLinkedList<'x, u64>> Scenario<'x> for FullTraversalScenario<L> {
     type Impl = L;
 
     fn new(init: ScenarioInit<'x>) -> Self {
@@ -67,11 +67,11 @@ impl<'x, L: DoubleLinkedList<'x, u64>> Scenario<'x> for SumScenario<L> {
 
 // ----------------------------------------------------------------------------
 
-pub struct PushDeleteOneScenario<'x, L> {
+pub struct AllocationReuseStressScenario<'x, L> {
     init: ScenarioInit<'x>,
     _p: PhantomData<L>,
 }
-impl<'x, L: DoubleLinkedList<'x, u64>> Scenario<'x> for PushDeleteOneScenario<'x, L> {
+impl<'x, L: DoubleLinkedList<'x, u64>> Scenario<'x> for AllocationReuseStressScenario<'x, L> {
     type Impl = L;
 
     fn new(init: ScenarioInit<'x>) -> Self {
@@ -95,11 +95,11 @@ impl<'x, L: DoubleLinkedList<'x, u64>> Scenario<'x> for PushDeleteOneScenario<'x
 
 // ----------------------------------------------------------------------------
 
-pub struct PushScenario<'x, L> {
+pub struct BulkAppendScenario<'x, L> {
     init: ScenarioInit<'x>,
     _p: PhantomData<L>,
 }
-impl<'x, L: DoubleLinkedList<'x, u64>> Scenario<'x> for PushScenario<'x, L> {
+impl<'x, L: DoubleLinkedList<'x, u64>> Scenario<'x> for BulkAppendScenario<'x, L> {
     type Impl = L;
 
     fn new(init: ScenarioInit<'x>) -> Self {
@@ -122,11 +122,11 @@ impl<'x, L: DoubleLinkedList<'x, u64>> Scenario<'x> for PushScenario<'x, L> {
 
 // ----------------------------------------------------------------------------
 
-pub struct Fragmentation<'x, L> {
+pub struct FragmentationStress<'x, L> {
     init: ScenarioInit<'x>,
     _p: PhantomData<L>,
 }
-impl<'x, L: DoubleLinkedList<'x, u64>> Scenario<'x> for Fragmentation<'x, L> {
+impl<'x, L: DoubleLinkedList<'x, u64>> Scenario<'x> for FragmentationStress<'x, L> {
     type Impl = L;
 
     fn new(init: ScenarioInit<'x>) -> Self {
@@ -259,12 +259,12 @@ impl<'x, L: DoubleLinkedList<'x, u64>> Scenario<'x> for Order<'x, L> {
 
 // ----------------------------------------------------------------------------
 
-pub struct SearchMiddle<L> {
+pub struct LinearLookup<L> {
     list: L,
     iterations: u64,
     batch: u64,
 }
-impl<'x, L: DoubleLinkedList<'x, u64>> Scenario<'x> for SearchMiddle<L> {
+impl<'x, L: DoubleLinkedList<'x, u64>> Scenario<'x> for LinearLookup<L> {
     type Impl = L;
 
     fn new(init: ScenarioInit<'x>) -> Self {
@@ -302,11 +302,11 @@ impl<'x, L: DoubleLinkedList<'x, u64>> Scenario<'x> for SearchMiddle<L> {
 
 // ----------------------------------------------------------------------------
 
-pub struct AddFrontBack<'x, L> {
+pub struct BidirectionalGrowth<'x, L> {
     init: ScenarioInit<'x>,
     _p: PhantomData<L>,
 }
-impl<'x, L: DoubleLinkedList<'x, u64>> Scenario<'x> for AddFrontBack<'x, L> {
+impl<'x, L: DoubleLinkedList<'x, u64>> Scenario<'x> for BidirectionalGrowth<'x, L> {
     type Impl = L;
 
     fn new(init: ScenarioInit<'x>) -> Self {
@@ -335,11 +335,11 @@ pub struct Page {
     data: [u8; 4096],
 }
 
-pub struct PushPages<'x, L> {
+pub struct LargeNodeBidirectionalGrowth<'x, L> {
     init: ScenarioInit<'x>,
     _p: PhantomData<L>,
 }
-impl<'x, L: DoubleLinkedList<'x, Page>> Scenario<'x> for PushPages<'x, L> {
+impl<'x, L: DoubleLinkedList<'x, Page>> Scenario<'x> for LargeNodeBidirectionalGrowth<'x, L> {
     type Impl = L;
 
     fn new(init: ScenarioInit<'x>) -> Self {
@@ -364,12 +364,12 @@ impl<'x, L: DoubleLinkedList<'x, Page>> Scenario<'x> for PushPages<'x, L> {
     }
 }
 
-pub struct IteratePages<L> {
+pub struct LargeNodeTraversal<L> {
     list: L,
     sum_one: u64,
     _p: PhantomData<L>,
 }
-impl<'x, L: DoubleLinkedList<'x, Page>> Scenario<'x> for IteratePages<L> {
+impl<'x, L: DoubleLinkedList<'x, Page>> Scenario<'x> for LargeNodeTraversal<L> {
     type Impl = L;
 
     fn new(init: ScenarioInit<'x>) -> Self {
@@ -406,12 +406,12 @@ impl<'x, L: DoubleLinkedList<'x, Page>> Scenario<'x> for IteratePages<L> {
 
 // ----------------------------------------------------------------------------
 
-pub struct FindString<L> {
+pub struct LinearSearchExpensiveComparison<L> {
     list: L,
     iterations: u64,
     _p: PhantomData<L>,
 }
-impl<'x, L: DoubleLinkedList<'x, String>> Scenario<'x> for FindString<L> {
+impl<'x, L: DoubleLinkedList<'x, String>> Scenario<'x> for LinearSearchExpensiveComparison<L> {
     type Impl = L;
 
     fn new(init: ScenarioInit<'x>) -> Self {
@@ -487,11 +487,11 @@ impl<'x, L: DoubleLinkedList<'x, u64>> Scenario<'x> for MutateInPlace<L> {
 
 // ----------------------------------------------------------------------------
 
-pub struct UseAfterDelete<'x, L> {
+pub struct UseAfterFree<'x, L> {
     init: ScenarioInit<'x>,
     _p: PhantomData<L>,
 }
-impl<'x, L: DoubleLinkedList<'x, u64>> Scenario<'x> for UseAfterDelete<'x, L> {
+impl<'x, L: DoubleLinkedList<'x, u64>> Scenario<'x> for UseAfterFree<'x, L> {
     type Impl = L;
 
     fn new(init: ScenarioInit<'x>) -> Self {
@@ -516,11 +516,11 @@ impl<'x, L: DoubleLinkedList<'x, u64>> Scenario<'x> for UseAfterDelete<'x, L> {
 
 // ----------------------------------------------------------------------------
 
-pub struct UseAfterDeleteAndReinsert<'x, L> {
+pub struct UseAfterFreeAndReinsertion<'x, L> {
     init: ScenarioInit<'x>,
     _p: PhantomData<L>,
 }
-impl<'x, L: DoubleLinkedList<'x, u64>> Scenario<'x> for UseAfterDeleteAndReinsert<'x, L> {
+impl<'x, L: DoubleLinkedList<'x, u64>> Scenario<'x> for UseAfterFreeAndReinsertion<'x, L> {
     type Impl = L;
 
     fn new(init: ScenarioInit<'x>) -> Self {

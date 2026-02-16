@@ -15,8 +15,8 @@ Use the workspace runner binary; it exposes all test parameters.
 
 ### Scenarios
 - Validation: `first`, `last`, `order`, `mutate_in_place`
-- Bench: `find_string`, `push_pages`, `iterate_pages`, `add_front_back`, `search_middle`, `sum`, `push_delete_one`, `push`, `fragmentation`
-- Safety: `use_after_delete`, `use_after_delete_reinsert`, `double_free`
+- Bench: `linear_search_exp`, `large_node_growth`, `large_node_traversal`, `bidir_growth`, `linear_lookup`, `full_traversal`, `alloc_reuse`, `bulk_append`, `frag_stress`
+- Safety: `use_after_free`, `use_after_free_reinsert`, `double_free`
 
 ### Examples
 - Default benches (system allocator):  
