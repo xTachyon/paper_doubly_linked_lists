@@ -1,3 +1,28 @@
+## Introduction
+
+This repository explores doubly linked list designs in Rust and provides a reproducible harness to compare multiple implementations across three dimensions: correctness (validation scenarios), memory safety (negative tests that try to trigger misuse), and performance (microbenchmarks).
+
+What’s included:
+- Multiple list and list-like implementations (e.g., raw pointers, `Rc`, handle/slotmap/index-based, arena-backed, `std::collections::LinkedList`, map-backed variants), exercised through a common interface.
+- A single runner binary to orchestrate scenarios, iteration counts, and allocator configuration.
+- Ready-to-run scenarios for validation, safety, and benchmarking, plus helper scripts to parse and aggregate results.
+
+If you just want to run the suite, jump to “Running the tests” below for commands and flags. Example result tables are also included further down.
+
+## Implementations
+
+- `rust_handle_impl`: `Handle<T>` (index + generation), `Vec<Option<Element<T>>>` storage
+- `rust_slotmap_impl`: `slotmap::DefaultKey`, `SlotMap<DefaultKey, Node<T>>` storage
+- `rust_nonnull_impl`: `NonNull<Node<T>>`, prev/next as `Option<NonNull<Node<T>>>`
+- `rust_index_impl`: `u32` index, `Vec<Option<Element<T)>>` with `u32::MAX` as null
+- `rust_raw_impl`: raw `*mut Node<T>` pointers, null for missing links
+- `rust_rc_impl`: `Weak<RefCell<Node<T>>>` node refs; nodes as `Rc<RefCell<_>>`
+- `rust_hashmap_impl`: `usize` key, `HashMap<usize, Node<T>>` storage
+- `rust_btreemap_impl`: `usize` key, `BTreeMap<usize, Node<T>>` storage
+- `rust_std_linked_list_impl`: `NonNull<Node<T>>` from `std_stuff::linked_list::LinkedList`
+- `rust_slab_impl`: `usize` key, `slab::Slab<Node<T>>` storage
+- `rust_gen_arena_impl`: `generational_arena::Index`, `Arena<Node<T>>` storage
+
 ## Running the tests
 
 Use the workspace runner binary; it exposes all test parameters.
