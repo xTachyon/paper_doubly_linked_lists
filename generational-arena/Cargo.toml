@@ -31,11 +31,6 @@ serde_yaml = "0.8.13"
 bincode = "1.2.0"
 serde = { version = "1.0.102", default-features = false, features = ["derive"] }
 
-[[bench]]
-name = "benches"
-path = "benches/benches.rs"
-harness = false
-
 [features]
 default = ["std"]
 std = []

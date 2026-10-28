@@ -40,7 +40,12 @@ impl<'x, T> DoubleLinkedList<'x, T> for Implementation<'x, T> {
     }
 
     fn insert_after(&mut self, node: Self::NodeRef, value: T) -> Self::NodeRef {
-        let next = self.map.get(node).and_then(|n| n.next);
+        // validate before mutating anything, so a stale key cannot leave the list corrupted
+        let next = self
+            .map
+            .get(node)
+            .map(|n| n.next)
+            .expect("insert_after called with node not in list");
         let new_key = self.allocate(value);
         {
             let new_node = self.map.get_mut(new_key).unwrap();
@@ -59,7 +64,11 @@ impl<'x, T> DoubleLinkedList<'x, T> for Implementation<'x, T> {
     }
 
     fn insert_before(&mut self, node: Self::NodeRef, value: T) -> Self::NodeRef {
-        let prec = self.map.get(node).and_then(|n| n.prec);
+        let prec = self
+            .map
+            .get(node)
+            .map(|n| n.prec)
+            .expect("insert_before called with node not in list");
         let new_key = self.allocate(value);
 
         {

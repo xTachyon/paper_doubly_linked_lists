@@ -71,7 +71,7 @@ macro_rules! list_impl {
             // validation
             sv::<First<solutions::$name::Implementation<u64>>>("first"),
             sv::<Last<solutions::$name::Implementation<u64>>>("last"),
-            sv::<Last<solutions::$name::Implementation<u64>>>("order"),
+            sv::<Order<solutions::$name::Implementation<u64>>>("order"),
             // bench
             sb::<LinearSearchExpensiveComparison<solutions::$name::Implementation<String>>>(
                 "linear_search_exp",
@@ -79,7 +79,9 @@ macro_rules! list_impl {
             sb::<LargeNodeBidirectionalGrowth<solutions::$name::Implementation<Page>>>(
                 "large_node_growth",
             ),
-            sb::<LargeNodeTraversal<solutions::$name::Implementation<Page>>>("large_node_traversal"),
+            sb::<LargeNodeTraversal<solutions::$name::Implementation<Page>>>(
+                "large_node_traversal",
+            ),
             sb::<BidirectionalGrowth<solutions::$name::Implementation<u64>>>("bidir_growth"),
             sb::<LinearLookup<solutions::$name::Implementation<u64>>>("linear_lookup"),
             sb::<FullTraversalScenario<solutions::$name::Implementation<u64>>>("full_traversal"),

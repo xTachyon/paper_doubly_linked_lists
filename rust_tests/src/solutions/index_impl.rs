@@ -25,41 +25,45 @@ impl<'x, T> DoubleLinkedList<'x, T> for Implementation<'x, T> {
     }
 
     fn insert_after(&mut self, node: Self::NodeRef, value: T) -> Self::NodeRef {
-        if self.data.is_empty() {
+        if self.is_empty() {
             self.add_first_element(value)
-        } else if node != u32::MAX {
+        } else {
+            // validate before allocating: a freed slot at the top of the free
+            // list would otherwise be reused for the new node and link to itself
+            let cnode_next = match self.element(node) {
+                Some(e) => e.next,
+                None => panic!("insert_after called with node not in list"),
+            };
             let new_node = self.allocate(value);
-            let cnode_next = self.data[node as usize].as_ref().unwrap().next;
             self.link(node, new_node);
             self.link(new_node, cnode_next);
             if node == self.last {
                 self.last = new_node;
             }
             new_node
-        } else {
-            panic!("insert_after called with node not in list");
         }
     }
 
     fn insert_before(&mut self, node: Self::NodeRef, value: T) -> Self::NodeRef {
-        if self.data.is_empty() {
+        if self.is_empty() {
             self.add_first_element(value)
-        } else if node != u32::MAX {
+        } else {
+            let cnode_prec = match self.element(node) {
+                Some(e) => e.prec,
+                None => panic!("insert_before called with node not in list"),
+            };
             let new_node = self.allocate(value);
-            let cnode_prec = self.data[node as usize].as_ref().unwrap().prec;
             self.link(new_node, node);
             self.link(cnode_prec, new_node);
             if node == self.first {
                 self.first = new_node;
             }
             new_node
-        } else {
-            panic!("insert_before called with node not in list");
         }
     }
 
     fn push_back(&mut self, value: T) -> Self::NodeRef {
-        if self.data.is_empty() {
+        if self.is_empty() {
             self.add_first_element(value)
         } else {
             let node = self.allocate(value);
@@ -70,7 +74,7 @@ impl<'x, T> DoubleLinkedList<'x, T> for Implementation<'x, T> {
     }
 
     fn push_front(&mut self, value: T) -> Self::NodeRef {
-        if self.data.is_empty() {
+        if self.is_empty() {
             self.add_first_element(value)
         } else {
             let node = self.allocate(value);
@@ -190,15 +194,11 @@ impl<'x, T> Implementation<'x, T> {
         }
     }
     fn add_first_element(&mut self, value: T) -> u32 {
-        // assume self.data is empty
-        self.data.push(Some(Element {
-            next: u32::MAX,
-            prec: u32::MAX,
-            value,
-        }));
-        self.first = 0;
-        self.last = 0;
-        0
+        // the list is logically empty, but `data` may still hold freed slots
+        let idx = self.allocate(value);
+        self.first = idx;
+        self.last = idx;
+        idx
     }
     fn element(&self, handle: u32) -> Option<&Element<T>> {
         let index = handle as usize;
@@ -216,5 +216,10 @@ impl<'x, T> Implementation<'x, T> {
         } else {
             None
         }
+    }
+
+    fn is_empty(&self) -> bool {
+        // `data` never shrinks, so emptiness is tracked through the head link
+        self.first == u32::MAX
     }
 }

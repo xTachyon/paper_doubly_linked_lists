@@ -271,6 +271,9 @@ fn main() {
             dst.display(),
             build_type
         );
+        // Multi-config generators (Visual Studio) put the library in <build>/<config>,
+        // single-config ones (Ninja) put it directly in <build>.
+        println!("cargo:rustc-link-search=native={}", dst.display());
     } else {
         println!("cargo:rustc-link-search=native={}", dst.display());
     }

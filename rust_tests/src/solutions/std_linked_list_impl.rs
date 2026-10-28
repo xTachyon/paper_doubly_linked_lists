@@ -50,11 +50,11 @@ impl<'x, T> DoubleLinkedList<'x, T> for Implementation<T> {
         let target_elem_ptr = unsafe { &(*node.as_ptr()).element as *const T };
         let mut cursor = self.nodes.cursor_front_mut();
         while let Some(curr) = cursor.current() {
-                if (curr as *const T) == target_elem_ptr {
-                    cursor.insert_after(value);
-                    return unsafe { (*node.as_ptr()).next.unwrap() };
-                }
-                cursor.move_next();
+            if (curr as *const T) == target_elem_ptr {
+                cursor.insert_after(value);
+                return unsafe { (*node.as_ptr()).next.unwrap() };
+            }
+            cursor.move_next();
         }
         panic!("insert_after called with a node that is not in this list")
     }
@@ -63,11 +63,11 @@ impl<'x, T> DoubleLinkedList<'x, T> for Implementation<T> {
         let target_elem_ptr = unsafe { &(*node.as_ptr()).element as *const T };
         let mut cursor = self.nodes.cursor_front_mut();
         while let Some(curr) = cursor.current() {
-                if (curr as *const T) == target_elem_ptr {
-                    cursor.insert_before(value);
-                    return unsafe { (*node.as_ptr()).prev.unwrap() };
-                }
-                cursor.move_next();
+            if (curr as *const T) == target_elem_ptr {
+                cursor.insert_before(value);
+                return unsafe { (*node.as_ptr()).prev.unwrap() };
+            }
+            cursor.move_next();
         }
         panic!("insert_before called with a node that is not in this list")
     }

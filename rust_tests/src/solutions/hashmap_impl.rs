@@ -1,5 +1,5 @@
 use super::DoubleLinkedList;
-use hashbrown::{hash_map::DefaultHashBuilder, HashMap};
+use hashbrown::{DefaultHashBuilder, HashMap};
 use std::fmt::Debug;
 use tests_api::TheAlloc;
 

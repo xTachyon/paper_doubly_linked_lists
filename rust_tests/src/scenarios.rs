@@ -249,7 +249,7 @@ impl<'x, L: DoubleLinkedList<'x, u64>> Scenario<'x> for Order<'x, L> {
             let v = *list.value(element.clone()).unwrap();
             let w = *list.value(values[values_index].clone()).unwrap();
             assert_eq!(v, w);
-            assert_eq!(v, values_index as u64);
+            assert_eq!(v, values_index as u64 + 1);
             values_index += 1;
 
             first = list.next(element);

@@ -13,8 +13,8 @@ pub struct SnAlloc {
 
 impl Default for SnAlloc {
     fn default() -> Self {
-         Self::new()
-     }
+        Self::new()
+    }
 }
 
 impl SnAlloc {

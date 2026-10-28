@@ -176,18 +176,15 @@ fn bench<'x>(
         unsafe { (i.run)(object) };
         let elapsed = time.elapsed();
         let alloc_time = alloc.time();
-        results
-            .entry(i.name)
-            .or_default()
-            .push(TestResult {
-                scenario: i.name,
-                impl_name: &test.name,
-                run_time: elapsed - alloc_time,
-                alloc_time,
-                no_allocs: alloc.no_allocs(),
-                max_memory: alloc.max_allocated(),
-                extra: TestResultExtra::default(),
-            });
+        results.entry(i.name).or_default().push(TestResult {
+            scenario: i.name,
+            impl_name: &test.name,
+            run_time: elapsed - alloc_time,
+            alloc_time,
+            no_allocs: alloc.no_allocs(),
+            max_memory: alloc.max_allocated(),
+            extra: TestResultExtra::default(),
+        });
     }
 }
 
@@ -463,7 +460,6 @@ fn main_impl() -> Result<()> {
     for i in tests.iter() {
         bench(i, &mut results, allocator_kind, args.percent, is_bench);
     }
- 
 
     let mut output: Vec<[&dyn Display; 7]> = Vec::with_capacity(64);
     for tests in results.values_mut() {

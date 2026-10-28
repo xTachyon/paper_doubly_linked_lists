@@ -18,7 +18,8 @@ pub struct Implementation<'x, T> {
 
 impl<'x, T> Implementation<'x, T> {
     fn allocate_node(&mut self, value: T) -> *mut Node<T> {
-        Box::into_raw(Box::new_in(
+        // `Box::into_raw` is only defined for `Box<T, Global>`
+        Box::into_raw_with_allocator(Box::new_in(
             Node {
                 value,
                 prev: ptr::null_mut(),
@@ -26,11 +27,23 @@ impl<'x, T> Implementation<'x, T> {
             },
             self.alloc,
         ))
+        .0
     }
 
     fn deallocate_node(&mut self, node: *mut Node<T>) {
         unsafe {
             Box::from_raw_in(node, self.alloc);
+        }
+    }
+}
+
+impl<'x, T> Drop for Implementation<'x, T> {
+    fn drop(&mut self) {
+        let mut current = self.first;
+        while !current.is_null() {
+            let next = unsafe { (*current).next };
+            self.deallocate_node(current);
+            current = next;
         }
     }
 }

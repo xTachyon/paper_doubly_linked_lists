@@ -18,20 +18,35 @@ pub struct Implementation<'x, T> {
 
 impl<'x, T> Implementation<'x, T> {
     fn allocate(&mut self, value: T) -> NonNull<Node<T>> {
-        NonNull::new(Box::into_raw(Box::new_in(
-            Node {
-                value,
-                prev: None,
-                next: None,
-            },
-            self.alloc,
-        )))
+        // `Box::into_raw` is only defined for `Box<T, Global>`
+        NonNull::new(
+            Box::into_raw_with_allocator(Box::new_in(
+                Node {
+                    value,
+                    prev: None,
+                    next: None,
+                },
+                self.alloc,
+            ))
+            .0,
+        )
         .expect("Failed to allocate node")
     }
 
     fn deallocate(&mut self, node: NonNull<Node<T>>) {
         unsafe {
             Box::from_raw_in(node.as_ptr(), self.alloc);
+        }
+    }
+}
+
+impl<'x, T> Drop for Implementation<'x, T> {
+    fn drop(&mut self) {
+        let mut current = self.first;
+        while let Some(node) = current {
+            let next = unsafe { node.as_ref().next };
+            self.deallocate(node);
+            current = next;
         }
     }
 }

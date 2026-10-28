@@ -78,14 +78,16 @@ impl<'x, T> DoubleLinkedList<'x, T> for Implementation<'x, T> {
     }
 
     fn insert_after(&mut self, node: Self::NodeRef, value: T) -> Self::NodeRef {
-        if self.data.is_empty() {
+        if self.is_empty() {
             self.add_first_element(value)
         } else {
-            if !node.is_valid() {
-                panic!("insert_after called with node not in list");
-            }
+            // validate (index and generation) before allocating, so a stale
+            // handle can neither alias a reused slot nor leave an orphan node
+            let cnode_next = match self.element(node) {
+                Some(e) => e.next,
+                None => panic!("insert_after called with node not in list"),
+            };
             let new_node = self.allocate(value);
-            let cnode_next = self.data[node.index as usize].as_ref().unwrap().next;
             self.link(node, new_node);
             self.link(new_node, cnode_next);
             if (node.unique_id == self.last.unique_id) && (node.index == self.last.index) {
@@ -96,24 +98,25 @@ impl<'x, T> DoubleLinkedList<'x, T> for Implementation<'x, T> {
     }
 
     fn insert_before(&mut self, node: Self::NodeRef, value: T) -> Self::NodeRef {
-        if self.data.is_empty() {
+        if self.is_empty() {
             self.add_first_element(value)
-        } else if node.is_valid() {
+        } else {
+            let cnode_prec = match self.element(node) {
+                Some(e) => e.prec,
+                None => panic!("insert_before called with node not in list"),
+            };
             let new_node = self.allocate(value);
-            let cnode_prec = self.data[node.index as usize].as_ref().unwrap().prec;
             self.link(new_node, node);
             self.link(cnode_prec, new_node);
             if (node.unique_id == self.first.unique_id) && (node.index == self.first.index) {
                 self.first = new_node;
             }
             new_node
-        } else {
-            panic!("insert_before called with node not in list");
         }
     }
 
     fn push_back(&mut self, value: T) -> Self::NodeRef {
-        if self.data.is_empty() {
+        if self.is_empty() {
             self.add_first_element(value)
         } else {
             let node = self.allocate(value);
@@ -124,7 +127,7 @@ impl<'x, T> DoubleLinkedList<'x, T> for Implementation<'x, T> {
     }
 
     fn push_front(&mut self, value: T) -> Self::NodeRef {
-        if self.data.is_empty() {
+        if self.is_empty() {
             self.add_first_element(value)
         } else {
             let node = self.allocate(value);
@@ -251,17 +254,16 @@ impl<'x, T> Implementation<'x, T> {
         }
     }
     fn add_first_element(&mut self, value: T) -> Handle<T> {
-        // assume self.data is empty
-        let h = Handle::new(0);
-        self.data.push(Some(Element {
-            next: Handle::INVALID,
-            prec: Handle::INVALID,
-            value,
-            unique_id: h.unique_id,
-        }));
+        // the list is logically empty, but `data` may still hold freed slots
+        let h = self.allocate(value);
         self.first = h;
         self.last = h;
         h
+    }
+    #[inline(always)]
+    fn is_empty(&self) -> bool {
+        // `data` never shrinks, so emptiness is tracked through the head link
+        !self.first.is_valid()
     }
     fn element(&self, handle: Handle<T>) -> Option<&Element<T>> {
         let index = handle.index as usize;
